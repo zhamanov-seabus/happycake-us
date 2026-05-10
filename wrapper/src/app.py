@@ -89,11 +89,30 @@ async def chat(payload: ChatIn) -> ChatOut:
 # Browser opens an EventSource here; we stream status changes as the owner
 # acts. Times out heartbeat every 25 s so proxies don't kill the connection.
 
+# Short-polling: returns the latest known state for an order, plus the
+# entire publish history. The website chat widget polls this every 2 s.
+# (SSE is implemented but Cloudflare quick tunnels buffer it indefinitely;
+# polling works through any proxy.)
+
+@app.get("/order/{order_id}")
+async def order_status(order_id: str) -> dict:
+    state = order_events.get_state(order_id)
+    history = order_events.get_history(order_id)
+    return {
+        "order_id": order_id,
+        "status": (state or {}).get("status", "pending_owner"),
+        "latest": state,
+        "history": history,
+    }
+
+
 @app.get("/order/{order_id}/events")
 async def order_status_stream(order_id: str) -> StreamingResponse:
+    """SSE alternative — kept for clients on proxies that don't buffer."""
     async def gen():
         q = await order_events.subscribe(order_id)
         try:
+            yield ":" + (" " * 2048) + "\n\n"
             yield f"event: open\ndata: {json.dumps({'order_id': order_id})}\n\n"
             while True:
                 try:
@@ -103,7 +122,6 @@ async def order_status_stream(order_id: str) -> StreamingResponse:
                     continue
                 yield f"event: status\ndata: {json.dumps(event)}\n\n"
                 if event.get("status") in ("approved", "rejected"):
-                    # Terminal states — close the stream.
                     break
         finally:
             order_events.unsubscribe(order_id, q)
@@ -111,11 +129,7 @@ async def order_status_stream(order_id: str) -> StreamingResponse:
     return StreamingResponse(
         gen(),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
     )
 
 

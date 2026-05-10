@@ -34,33 +34,41 @@ const wrapperUrl = import.meta.env.PUBLIC_WRAPPER_URL ?? 'http://localhost:8000'
     messages.scrollTop = messages.scrollHeight;
   }
 
-  // One open EventSource at a time; replaced when a new order starts.
-  let activeEs = null;
+  // Polling for order status — SSE works locally but Cloudflare's quick
+  // tunnels buffer it indefinitely, so we poll instead. Stops on terminal
+  // states or after ~5 minutes.
+  let activePoll = null;
 
   function subscribeToOrder(orderId) {
     if (!orderId) return;
-    if (activeEs) {
-      try { activeEs.close(); } catch {}
+    if (activePoll) {
+      clearInterval(activePoll.timer);
+      activePoll = null;
     }
-    const url = wrapperUrl + '/order/' + encodeURIComponent(orderId) + '/events';
-    activeEs = new EventSource(url);
-    activeEs.addEventListener('status', (ev) => {
+    const seenStatuses = new Set();
+    const startedAt = Date.now();
+    const tick = async () => {
       try {
-        const update = JSON.parse(ev.data);
-        const text = update.message || ('Status: ' + update.status);
-        addMessage('bot', text);
-        if (update.status === 'approved' || update.status === 'rejected') {
-          try { activeEs.close(); } catch {}
-          activeEs = null;
+        const r = await fetch(wrapperUrl + '/order/' + encodeURIComponent(orderId), { method: 'GET' });
+        if (!r.ok) return;
+        const data = await r.json();
+        for (const ev of (data.history || [])) {
+          const key = (ev.status || '') + '|' + (ev.message || '');
+          if (seenStatuses.has(key)) continue;
+          seenStatuses.add(key);
+          if (ev.message) addMessage('bot', ev.message);
         }
-      } catch (e) {}
-    });
-    activeEs.addEventListener('error', () => {
-      // EventSource auto-reconnects on transient errors; only nuke if closed.
-      if (activeEs && activeEs.readyState === EventSource.CLOSED) {
-        activeEs = null;
-      }
-    });
+        if (data.status === 'approved' || data.status === 'rejected') {
+          clearInterval(activePoll.timer);
+          activePoll = null;
+        } else if (Date.now() - startedAt > 5 * 60 * 1000) {
+          clearInterval(activePoll.timer);
+          activePoll = null;
+        }
+      } catch {}
+    };
+    activePoll = { timer: setInterval(tick, 2500) };
+    setTimeout(tick, 800);  // first poll fires quickly to catch a fast Approve
   }
 
   async function send(text) {
