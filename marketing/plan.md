@@ -95,6 +95,20 @@ Every promo code is written into the order's `items[].note` field at `square_cre
 - **Owner digest:** every Sunday 18:00 CT, the agent calls `marketing_report_to_owner` and posts a Telegram summary to `@happy_cake_owner_bot` showing spend, redemptions per code, top performer, worst performer, and the planned reroute. The owner has 24h to redirect before reroute auto-applies.
 - **Audit trail:** every campaign create / adjust / report call is appended to `evidence/log.jsonl` with the sandbox-side ID, so a fresh evaluator clone reproduces the full marketing loop via [scripts/seed.sh](../scripts/seed.sh) → [scripts/seed-evaluator-evidence.py](../scripts/seed-evaluator-evidence.py).
 
+## Sensitivity analysis — what we do if a channel underperforms
+
+A pace gate at day 14 fires `marketing_adjust_campaign` automatically when actual revenue is < 50% of expected. The plan below is what the wrapper feeds into that adjust call so the reroute is principled, not improvised.
+
+| Channel | Underperformance trigger | Reroute |
+|---|---|---|
+| **1 — B2B office-box** | < 1 conversion by day 14 (i.e. < $150 booked from $150 spent) | Cut spend in half; redirect $75 to **channel 2** (BACK5) where CAC is structurally lowest. The B2B reach itself isn't wasted — the 20 contacts stay warm in the agent's memory for next month's seasonal touch. |
+| **2 — Repeat customer (BACK5)** | < 6% redemption rate at day 7 (industry baseline 10%) | Pause broadcast; rewrite the message in Russian for the bilingual subset (~40% of the file) and re-send to that segment only. Re-test redemption rate; if still below 6%, the file is genuinely cold and we redirect $50 to **channel 4** reviews. |
+| **3 — Meta Ads celebration** | CPL > $6 (vs. $4 expected) at day 10 | Kill variant A (carousel), double creative B (UGC vertical video) budget. If CPL still > $6 by day 14, pause and redirect remaining $75 to **channel 5** (Friday IG boost) where organic engagement is already proven. |
+| **4 — Reviews funnel** | < 12 reviews by day 21 (vs. 25 expected) | Increase incentive from "free slice" to "free slice + $5 off next whole cake" for the remaining ten reviews. The rationale: review velocity compounds the local-pack ranking; a one-cycle higher cost is recouped in month 2 organic discovery. |
+| **5 — Friday IG boost** | < 8 same-day counter orders tagged FRESH at day 14 | Move boost from Friday to Saturday (when the brandbook says counter traffic peaks). If still < 8 by day 21, pause IG entirely; redirect to **channel 4** reviews on the same compounding rationale. |
+
+Every reroute is logged to `evidence/log.jsonl` as a `marketing_reroute` event with the rationale, the source/destination channels, and the dollar move. Reproducible via the audit trail.
+
 ## Scaling path (when revenue allows)
 
 1. First $500 → execute as above, prove the office-box and repeat-customer channels.
@@ -104,4 +118,18 @@ Every promo code is written into the order's `items[].note` field at `square_cre
 
 ## Per-location → Texas network (franchise scope)
 
-This $500/month plan is **the per-location runbook**, not a Sugar Land one-off. The five channels, the promo codes (`OFFICE` / `BACK5` / `CAKE5` / `REVIEW` / `FRESH`), the GB cadence, the day-14 pace gate, the Sunday owner digest — all of it is tenant-scoped: a second HappyCake in Houston or Austin clones the repo, swaps `data/`, `.env`, the sandbox MCP team token, and `evidence/log.jsonl`, and runs the same loop unchanged. The franchise page at [`/franchise/`](../web/src/pages/franchise.astro) carries a 2% network-wide marketing fund line — that's where the cross-location campaigns sit (e.g. a single statewide IG creative tested in Houston, redeployed in Austin once it hits CAC parity). Until then, every Texas franchisee runs their own $500 with no network spend, and the network learns from each unit's `evidence/log.jsonl`.
+This $500/month plan is **the per-location runbook**, not a Sugar Land one-off. The five channels, the promo codes (`OFFICE` / `BACK5` / `CAKE5` / `REVIEW` / `FRESH`), the GB cadence, the day-14 pace gate, the Sunday owner digest — all of it is tenant-scoped: a second HappyCake in Houston or Austin clones the repo, swaps `data/`, `.env`, the sandbox MCP team token, and `evidence/log.jsonl`, and runs the same loop unchanged.
+
+### Network economics — what the 2% fund actually buys
+
+The franchise page at [`/franchise/`](../web/src/pages/franchise.astro) carries a 2% network-wide marketing fund. Run the math at three network sizes:
+
+| Texas locations | Combined monthly revenue (assume $17K/store baseline) | 2% fund | What that buys |
+|---:|---:|---:|---|
+| 5 | $85,000 | **$1,700/month** | One statewide IG creative test per quarter ($600 each, A/B between two cities), plus a Texas-Hispanic-Heritage-Month seasonal push every September ($800), plus reserve. |
+| 10 | $170,000 | **$3,400/month** | Above + monthly out-of-home test in one rotating metro (HEB exit billboard, ~$2,500), plus a single influencer/creator partnership per quarter ($1,500). |
+| 25 | $425,000 | **$8,500/month** | Above + a part-time network marketing coordinator (~$3,000/month) running cross-location creative production, plus 25K monthly impressions across YouTube pre-roll for high-intent celebration searches. |
+
+**The unit economics get better as the network grows**, not worse — every Texas franchisee benefits from learnings in the others' `evidence/log.jsonl`. A Houston creative that hit CAC parity at $7 doesn't have to be re-tested in Austin; it gets redeployed at zero new CAC. That's the structural advantage of the per-tenant architecture: shared learnings, isolated state, no data migration risk.
+
+Until then, every Texas franchisee runs their own $500 with no network spend, and the network learns from each unit's `evidence/log.jsonl`.

@@ -179,6 +179,9 @@ def get_app() -> Application:
         _app.add_handler(CommandHandler("purchase", _owner_only(_on_purchase)))
         _app.add_handler(CommandHandler("restock", _owner_only(_on_restock)))
         _app.add_handler(CommandHandler("audit", _owner_only(_on_audit)))
+        _app.add_handler(CommandHandler("pause", _owner_only(_on_pause)))
+        _app.add_handler(CommandHandler("resume", _owner_only(_on_resume)))
+        _app.add_handler(CommandHandler("status", _owner_only(_on_status)))
         _app.add_handler(CallbackQueryHandler(_owner_only(_on_callback), pattern=r"^order:"))
         _app.add_handler(CallbackQueryHandler(_owner_only(_on_post_callback), pattern=r"^post:"))
         # Free-form text from the owner is treated as a follow-up after Edit.
@@ -244,8 +247,11 @@ async def _on_start(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
 async def _on_help(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         "<b>HappyCake owner bot — commands</b>\n\n"
+        "• <code>/status</code> — at-a-glance snapshot (marketing state, pending, ingredients, log size)\n"
         "• <code>/today</code> — pending order cards\n"
         "• <code>/audit [YYYY-MM-DD]</code> — events from evidence/log.jsonl for that UTC day\n"
+        "• <code>/pause [reason]</code> — halt the marketing-sync loop\n"
+        "• <code>/resume</code> — re-enable the marketing loop\n"
         "• <code>/menu</code> — catalog with prices + live inventory + capacity\n"
         "• <code>/report</code> — POS revenue / kitchen load / lead funnel snapshot\n"
         "• <code>/post &lt;theme&gt;</code> — draft an Instagram post for your approval, e.g. <code>/post Friday bake batch</code>\n\n"
@@ -494,6 +500,110 @@ async def _on_audit(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         lines.append("<b>Highlights</b>")
         lines.extend(samples)
     await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+
+
+# ---------- Marketing pause / resume ----------
+# Persisted to data/marketing-state.json. The marketing-sync script reads
+# this on every cycle; if paused=True it skips sends without aborting.
+
+_MARKETING_STATE_PATH = REPO_ROOT / "data" / "marketing-state.json"
+
+
+def _read_marketing_state() -> dict[str, Any]:
+    if not _MARKETING_STATE_PATH.exists():
+        return {"paused": False, "paused_at": None, "paused_reason": None}
+    try:
+        return json.loads(_MARKETING_STATE_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {"paused": False, "paused_at": None, "paused_reason": None}
+
+
+def _write_marketing_state(state: dict[str, Any]) -> None:
+    try:
+        _MARKETING_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        tmp = _MARKETING_STATE_PATH.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(_MARKETING_STATE_PATH)
+    except Exception as e:
+        log.warning("could not persist marketing state: %s", e)
+
+
+async def _on_pause(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """`/pause [reason]` — halt the marketing-sync loop. Sends, broadcasts,
+    and reroute calls all skip until /resume."""
+    from datetime import datetime, timezone
+    reason = " ".join(ctx.args) if ctx.args else None
+    state = {
+        "paused": True,
+        "paused_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "paused_reason": reason,
+    }
+    _write_marketing_state(state)
+    evidence.log("marketing_paused", "telegram", state)
+    msg = "⏸ Marketing paused."
+    if reason:
+        msg += f"\nReason: {reason}"
+    msg += "\n\nThe sync loop will skip sends and broadcasts. Use /resume to re-enable."
+    await update.message.reply_text(msg)
+
+
+async def _on_resume(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """`/resume` — re-enable the marketing loop."""
+    from datetime import datetime, timezone
+    state = {
+        "paused": False,
+        "resumed_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+    _write_marketing_state(state)
+    evidence.log("marketing_resumed", "telegram", state)
+    await update.message.reply_text(
+        "▶️ Marketing resumed. The next sync cycle will pick up where it left off."
+    )
+
+
+async def _on_status(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """`/status` — quick at-a-glance: marketing state, pending order count,
+    ingredient flags, current evidence size. The 'is everything OK?' command."""
+    e = html.escape
+    mks = _read_marketing_state()
+    if mks.get("paused"):
+        mk_line = f"⏸ Marketing PAUSED since {mks.get('paused_at','?')}"
+        if mks.get("paused_reason"):
+            mk_line += f" ({e(mks['paused_reason'])})"
+    else:
+        mk_line = "▶️ Marketing running"
+
+    pending_count = len(_pending)
+    pending_line = f"📋 Pending order cards: {pending_count}"
+
+    # Ingredient flags
+    ing_flags = 0
+    try:
+        from . import inventory
+        ings = inventory.load_ingredients()
+        for n, s in ings.items():
+            try:
+                if float(s.get("on_hand", 0)) < float(s.get("reorder_at", 0)):
+                    ing_flags += 1
+            except Exception:
+                continue
+    except Exception:
+        pass
+    ing_line = f"🥚 Ingredients below reorder threshold: {ing_flags}"
+
+    # Evidence size
+    log_path = REPO_ROOT / "evidence" / "log.jsonl"
+    if log_path.exists():
+        size_kb = log_path.stat().st_size / 1024
+        ev_line = f"🧾 Evidence log: {size_kb:.1f} KB"
+    else:
+        ev_line = "🧾 Evidence log: empty"
+
+    await update.message.reply_text(
+        "<b>HappyCake — operational status</b>\n\n"
+        f"{mk_line}\n{pending_line}\n{ing_line}\n{ev_line}",
+        parse_mode="HTML",
+    )
 
 
 async def _on_callback(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
