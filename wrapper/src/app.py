@@ -191,12 +191,16 @@ async def lead(payload: LeadIn) -> dict:
 # ---------- Franchise inquiry ----------
 
 class FranchiseIn(BaseModel):
-    name: str
-    email: str
-    phone: str
-    city: str
-    capital: str            # one of: "250-400k" / "400-600k" / "600k+" / "raising"
-    timeline: str           # one of: "0-3mo" / "3-6mo" / "6-12mo" / "exploring"
+    # All fields default to None so Pydantic doesn't reject with a 422 on
+    # missing input. The endpoint runs its own validation and returns a
+    # consistent {ok: false, error: "missing_or_invalid", fields: [...]}
+    # shape that franchise.astro's submit handler renders inline.
+    name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    city: str | None = None
+    capital: str | None = None     # one of: "250-400k" / "400-600k" / "600k+" / "raising"
+    timeline: str | None = None    # one of: "0-3mo" / "3-6mo" / "6-12mo" / "exploring"
     message: str | None = None
 
 
