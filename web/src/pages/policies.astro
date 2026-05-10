@@ -1,0 +1,49 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCatalog } from '../lib/catalog';
+
+const b = getCatalog().business;
+
+const faq = [
+  { q: 'How early do I need to order?', a: 'Whole cakes: at least 45 minutes ahead. Catering boxes: 90 minutes. Custom cakes: 3 hours, plus a quick chat to confirm details.' },
+  { q: 'Do you deliver?', a: 'Pickup at the Sugar Land kitchen is the default. Local delivery is available on request — send us a message with your address and we will quote.' },
+  { q: 'Allergens — can I trust the labels?', a: 'We share what we know honestly. Our kitchen handles dairy, eggs, wheat, and tree nuts daily. We avoid cross-contamination but do not certify allergen-free production. If a guest has a serious allergy, please tell us before ordering.' },
+  { q: 'What about custom decoration?', a: 'Decoration is a small, optional service. We are best at our ready-made line. Custom requests get a real human review and an honest yes-or-no within the hour.' },
+  { q: 'How do I pay?', a: 'Card or cash at pickup. Online payment is rolling out — for now, ordering creates a hold and we settle at pickup.' },
+  { q: 'What if something is wrong with my cake?', a: 'Tell us the same day. We answer, fix, and learn. We never delete negative reviews — we reply to them.' },
+];
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faq.map(item => ({
+    '@type': 'Question',
+    name: item.q,
+    acceptedAnswer: { '@type': 'Answer', text: item.a },
+  })),
+};
+---
+<Layout title="Policies & FAQ">
+  <section class="container prose">
+    <h1>Policies & FAQ</h1>
+    <p>What to expect when you order from HappyCake. Honest, specific, and the same for everyone.</p>
+
+    {faq.map(item => (
+      <div>
+        <h2>{item.q}</h2>
+        <p>{item.a}</p>
+      </div>
+    ))}
+
+    <h2>Hours</h2>
+    <ul>
+      {Object.entries(b.hours).map(([day, range]) => (
+        <li><strong style="text-transform: capitalize;">{day}:</strong> {range}</li>
+      ))}
+    </ul>
+
+    <h2>Contact</h2>
+    <p>{b.closing_pattern}</p>
+  </section>
+  <script type="application/ld+json" set:html={JSON.stringify(faqJsonLd)} />
+</Layout>

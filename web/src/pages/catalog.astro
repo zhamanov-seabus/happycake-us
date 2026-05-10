@@ -1,0 +1,44 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCatalog, priceLabel } from '../lib/catalog';
+
+const catalog = getCatalog();
+---
+<Layout title="Catalog">
+  <section class="container">
+    <h1>Catalog</h1>
+    <p>Real cakes, made by hand in our Sugar Land kitchen.</p>
+
+    {catalog.categories.map(cat => {
+      const items = catalog.products.filter(p => p.category === cat.id);
+      if (!items.length) return null;
+      return (
+        <div>
+          <h2>{cat.name}</h2>
+          <p>{cat.blurb}</p>
+          <div class="grid">
+            {items.map(p => (
+              <article class="card">
+                <a href={`/product/${p.slug}/`}>
+                  <img src={p.photo} alt={p.name} loading="lazy" />
+                </a>
+                <div class="body">
+                  <h3 set:html={p.display_name} />
+                  <p>{p.description}</p>
+                  <div class="tags">
+                    {p.tags.map(t => <span class="tag">{t}</span>)}
+                  </div>
+                  <div class="meta">
+                    <span class="price">{priceLabel(p)}</span>
+                    <span class="weight">{p.weight}</span>
+                  </div>
+                  <a href={`/product/${p.slug}/`} class="cta">View &amp; order</a>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      );
+    })}
+  </section>
+</Layout>

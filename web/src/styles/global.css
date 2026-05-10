@@ -1,0 +1,238 @@
+/* Brand colors per HCU_BRANDBOOK.md §4: Happy Blue + cream */
+:root {
+  --happy-blue: #1B4868;
+  --cream: #FBF6E8;
+  --ink: #1B2230;
+  --muted: #5C6473;
+  --line: #E5DFCF;
+  --accent: #C99A3F;
+  --max-width: 1100px;
+}
+
+* { box-sizing: border-box; }
+
+html { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--ink); }
+body { margin: 0; background: var(--cream); }
+
+a { color: var(--happy-blue); text-decoration: underline; text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+
+h1, h2, h3, h4 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 600;
+  color: var(--happy-blue);
+  letter-spacing: -0.01em;
+}
+h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); margin: 0 0 0.6em; line-height: 1.1; }
+h2 { font-size: clamp(1.6rem, 3.5vw, 2.2rem); margin: 1.4em 0 0.4em; }
+h3 { font-size: 1.3rem; margin: 1em 0 0.3em; }
+
+p { line-height: 1.6; margin: 0 0 1em; }
+
+.container { max-width: var(--max-width); margin: 0 auto; padding: 0 1.25rem; }
+
+/* Header */
+header.site {
+  border-bottom: 1px solid var(--line);
+  background: var(--cream);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+header.site .bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 1.25rem;
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+header.site a.brand { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; }
+header.site .brand img { width: 36px; height: 36px; border-radius: 8px; }
+header.site .brand .name { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; font-weight: 600; color: var(--happy-blue); }
+header.site nav { display: flex; gap: 1.4rem; font-size: 0.95rem; }
+header.site nav a { text-decoration: none; color: var(--ink); }
+header.site nav a:hover { color: var(--happy-blue); }
+
+/* Footer */
+footer.site {
+  border-top: 1px solid var(--line);
+  margin-top: 4rem;
+  padding: 2rem 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+footer.site .container { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+
+/* Hero */
+.hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  padding: 3rem 0;
+  align-items: center;
+}
+.hero .copy h1 { margin-top: 0; }
+.hero .copy p.lead { font-size: 1.15rem; color: var(--muted); }
+.hero img { width: 100%; height: auto; border-radius: 16px; aspect-ratio: 4/3; object-fit: cover; }
+
+@media (max-width: 760px) {
+  .hero { grid-template-columns: 1fr; }
+}
+
+/* Catalog grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+.card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; }
+.card .body { padding: 1rem 1.1rem; flex-grow: 1; display: flex; flex-direction: column; }
+.card .body h3 { margin-top: 0; }
+.card .meta { display: flex; justify-content: space-between; margin-top: auto; padding-top: 0.6rem; align-items: baseline; }
+.card .price { font-size: 1.05rem; font-weight: 600; color: var(--happy-blue); }
+.card .weight { font-size: 0.85rem; color: var(--muted); }
+.card a.cta {
+  background: var(--happy-blue);
+  color: white;
+  text-decoration: none;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-top: 0.8rem;
+  display: inline-block;
+  align-self: flex-start;
+}
+.card a.cta:hover { background: var(--ink); }
+
+/* Pill tags */
+.tags { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0.5rem 0; }
+.tag {
+  font-size: 0.72rem;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Product page */
+.product {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.5rem;
+  padding: 2rem 0;
+}
+.product img { width: 100%; height: auto; border-radius: 16px; }
+.product h1 { margin-top: 0; }
+.product .price-row { font-size: 1.3rem; color: var(--happy-blue); font-weight: 600; margin-bottom: 1rem; }
+.product .order-note {
+  background: white;
+  border: 1px solid var(--line);
+  padding: 1rem 1.2rem;
+  border-radius: 12px;
+  margin-top: 1.5rem;
+}
+.product .order-note p { margin: 0; }
+
+@media (max-width: 760px) {
+  .product { grid-template-columns: 1fr; }
+}
+
+/* Assistant widget */
+.assistant-fab {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--happy-blue);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 1.4rem;
+  box-shadow: 0 6px 20px rgba(27, 72, 104, 0.3);
+  z-index: 100;
+}
+.assistant-panel {
+  position: fixed;
+  bottom: 5.5rem;
+  right: 1.5rem;
+  width: min(360px, 92vw);
+  max-height: 70vh;
+  background: white;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 40px rgba(27, 72, 104, 0.18);
+  z-index: 100;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.assistant-panel.open { display: flex; }
+.assistant-panel header {
+  background: var(--happy-blue);
+  color: white;
+  padding: 0.9rem 1.1rem;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.15rem;
+}
+.assistant-panel .messages {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  font-size: 0.92rem;
+}
+.assistant-panel .msg { margin: 0 0 0.7rem; }
+.assistant-panel .msg.you { text-align: right; }
+.assistant-panel .msg .bubble {
+  display: inline-block;
+  padding: 0.5rem 0.8rem;
+  border-radius: 12px;
+  max-width: 80%;
+  text-align: left;
+}
+.assistant-panel .msg.you .bubble { background: var(--happy-blue); color: white; }
+.assistant-panel .msg.bot .bubble { background: var(--cream); color: var(--ink); }
+.assistant-panel form {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  border-top: 1px solid var(--line);
+}
+.assistant-panel input {
+  flex: 1;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+.assistant-panel button {
+  background: var(--happy-blue);
+  color: white;
+  border: none;
+  padding: 0 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+/* Section spacing */
+section { margin: 3rem 0; }
+
+/* Policies / about */
+.prose { max-width: 720px; margin: 0 auto; }
+.prose h2 { margin-top: 2.2em; }
+.prose ul { line-height: 1.7; }

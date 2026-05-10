@@ -1,0 +1,61 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCatalog, priceLabel, type Product } from '../../lib/catalog';
+
+export function getStaticPaths() {
+  const catalog = getCatalog();
+  return catalog.products.map((product: Product) => ({
+    params: { slug: product.slug },
+    props: { product, business: catalog.business },
+  }));
+}
+
+const { product: p, business: b } = Astro.props;
+
+// Per-product JSON-LD
+const productJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name: p.name,
+  description: p.description,
+  image: `https://happycake.us${p.photo}`,
+  brand: { '@type': 'Brand', name: b.name },
+  category: p.category,
+  weight: p.weight,
+  offers: {
+    '@type': 'Offer',
+    priceCurrency: 'USD',
+    price: p.price_usd.toFixed(2),
+    availability: 'https://schema.org/InStock',
+    seller: { '@type': 'Bakery', name: b.name },
+  },
+};
+---
+<Layout title={p.display_name} description={p.description} ogImage={p.photo}>
+  <section class="container product">
+    <img src={p.photo} alt={p.name} />
+    <div>
+      <h1 set:html={p.display_name} />
+      <div class="price-row">{priceLabel(p)} · {p.weight}</div>
+      <p>{p.description}</p>
+      <div class="tags">
+        {p.tags.map((t: string) => <span class="tag">{t}</span>)}
+      </div>
+
+      {p.requires_owner_approval && (
+        <div class="order-note">
+          <p><strong>Custom order.</strong> Decoration is a small, optional service. Tell us the date, the size, and any allergies — the team reviews each request before we promise a date.</p>
+        </div>
+      )}
+
+      <div class="order-note">
+        <p>
+          <strong>To order:</strong> open the catalog and click the cake on the homepage to start a chat,
+          or send a message on WhatsApp. We confirm within the hour.<br />
+          <em>{b.closing_pattern}</em>
+        </p>
+      </div>
+    </div>
+  </section>
+  <script type="application/ld+json" set:html={JSON.stringify(productJsonLd)} />
+</Layout>

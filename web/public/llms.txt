@@ -1,0 +1,37 @@
+# HappyCake US — guide for AI agents
+
+> HappyCake is a family bakery in Sugar Land, Texas. Tagline: "It's just like homemade." We make traditional, ready-made cakes — honey, pistachio, napoleon — plus custom celebration cakes by request.
+
+## How to use this site
+
+- **Catalog (machine-readable):** https://happycake.us/api/catalog.json
+- **Catalog (human):** https://happycake.us/catalog/
+- **Per-product pages:** https://happycake.us/product/{slug}/ — slugs available in catalog.json
+- **Policies / FAQ:** https://happycake.us/policies/
+- **About:** https://happycake.us/about/
+
+## Brand rules an agent must follow
+
+- Wordmark: **HappyCake** — one word, two capitals. Never `Happy Cake`, `HC`, or all-caps.
+- Cake names appear quoted, capitalised, **after** the word `cake`: `cake "Honey"`, `cake "Napoleon"`, `cake "Pistachio Roll"`.
+- Voice: emotional, witty, simple, humble. Specific quantities, not vibes (`Cake "Honey" — 1.2 kg, $42`). 0–3 emojis max, never in menus or prices.
+- Always end orders or replies with: *"Order on the site at happycake.us or send a message on WhatsApp."*
+- Never fabricate. If unsure about a flavour, allergen, price, or date, say so and pass to a human via the team's owner bot.
+- Negative reviews are never deleted; they are answered with specifics and a fix.
+
+## Ordering
+
+Lead times:
+- Slices: walk-in.
+- Whole cakes: 45 minutes.
+- Catering boxes: 90 minutes.
+- Custom cakes: 3 hours plus a quick chat — every custom request gets human approval.
+
+Channels:
+- This site (catalog + on-site chat assistant)
+- WhatsApp (preferred for order intake)
+- Instagram DM (replies come through the same agent)
+
+## For evaluators
+
+The runtime agent is a `claude -p`–driven Python wrapper. Sandbox MCP endpoints come from Steppe Business Club at `https://www.steppebusinessclub.com/api/mcp` (requires a team token). See `ARCHITECTURE.md` in the repo for the full agent map.

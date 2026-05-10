@@ -1,0 +1,44 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCatalog } from '../lib/catalog';
+
+const b = getCatalog().business;
+---
+<Layout title="About">
+  <section class="container prose">
+    <h1>About HappyCake</h1>
+    <p><em>{b.tagline}</em></p>
+
+    <p>
+      It started with a phrase: <em>"It's just like homemade."</em>
+    </p>
+
+    <p>
+      We started baking cakes — as if for ourselves. Delicious, sweet, fresh cakes. People kept
+      coming back saying <em>"It tastes like I baked it myself"</em> and we realised that homemade
+      taste was the centre of what we wanted to make.
+    </p>
+
+    <p>
+      Every ingredient is carefully selected. Every cake is hand-decorated and hand-packed. Every
+      recipe was perfected over years until it earned its name.
+    </p>
+
+    <h2>What we believe</h2>
+    <ul>
+      <li><strong>Open and honest.</strong> We don't delete negative comments — we answer them.</li>
+      <li><strong>Creating value.</strong> A cake is more than a cake. Every detail counts.</li>
+      <li><strong>Confident.</strong> Confidence comes from the work, not from talking about the work.</li>
+      <li><strong>Happy.</strong> Every cake we make is a chance to add a brighter moment to someone's day.</li>
+    </ul>
+
+    <h2>What we are not</h2>
+    <ul>
+      <li>We are not a candy store. Traditional cakes, not exotic flavours of the week.</li>
+      <li>We are not custom cakes. Decoration is a small, optional service.</li>
+      <li>We are not exclusive. HappyCake is for families who care about traditional values.</li>
+    </ul>
+
+    <p>{b.closing_pattern}</p>
+  </section>
+</Layout>

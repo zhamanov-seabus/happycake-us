@@ -1,0 +1,111 @@
+# HappyCake catalog — single source of truth.
+# Mirrors square_list_catalog from sandbox MCP. Source of truth at runtime is the MCP;
+# this file feeds the static website build and the agent system prompt.
+#
+# Wordmark: HappyCake (one word, two capitals). Cake names quoted: cake "Honey".
+
+products:
+  - id: sq_item_honey_cake_slice
+    variation_id: sq_var_honey_cake_slice
+    kitchen_product_id: honey-cake-slice
+    name: "Honey cake slice"
+    display_name: 'cake "Honey" — slice'
+    slug: honey-cake-slice
+    category: slices
+    price_usd: 8.50
+    weight: "150 g"
+    description: "Tender layers of honey biscuit and sour-cream filling. The everyday slice."
+    photo: /images/happy-cake-product-01.webp
+    tags: [classic, single-serving, walk-in]
+
+  - id: sq_item_whole_honey_cake
+    variation_id: sq_var_whole_honey_cake
+    kitchen_product_id: whole-honey-cake
+    name: "Whole honey cake"
+    display_name: 'cake "Honey" — whole'
+    slug: whole-honey-cake
+    category: whole-cakes
+    price_usd: 55.00
+    weight: "1.2 kg"
+    description: "Classic honey cake, hand-built with sour-cream filling. Serves 8–10."
+    photo: /images/happy-cake-product-02.webp
+    tags: [classic, family-order, signature]
+    lead_time_minutes: 45
+
+  - id: sq_item_pistachio_roll
+    variation_id: sq_var_pistachio_roll
+    kitchen_product_id: pistachio-roll
+    name: "Pistachio roll"
+    display_name: 'cake "Pistachio Roll"'
+    slug: pistachio-roll
+    category: slices
+    price_usd: 9.50
+    weight: "180 g"
+    description: "Light biscuit with pistachio cream and a fine roasted-pistachio finish."
+    photo: /images/happy-cake-product-03.webp
+    tags: [premium, single-serving]
+
+  - id: sq_item_custom_birthday_cake
+    variation_id: sq_var_custom_birthday_cake
+    kitchen_product_id: custom-birthday-cake
+    name: "Custom birthday cake"
+    display_name: "Custom birthday cake"
+    slug: custom-birthday-cake
+    category: custom
+    price_usd: 95.00
+    weight: "1.5–2.0 kg"
+    description: "Personal celebration cake. Decoration is a small, optional service — every order is reviewed by the team before we promise a date."
+    photo: /images/happy-cake-product-04.webp
+    tags: [custom, requires-approval, celebration]
+    requires_owner_approval: true
+    lead_time_minutes: 180
+
+  - id: sq_item_office_dessert_box
+    variation_id: sq_var_office_dessert_box
+    kitchen_product_id: office-dessert-box
+    name: "Office dessert box"
+    display_name: "Office dessert box"
+    slug: office-dessert-box
+    category: catering
+    price_usd: 120.00
+    weight: "20 pcs."
+    description: "Assorted slices for offices and small events. We pick the day's freshest 20 pieces."
+    photo: /images/happy-cake-product-05.webp
+    tags: [catering, office, sharing]
+    lead_time_minutes: 90
+
+categories:
+  - id: slices
+    name: "Slices"
+    blurb: "Single-serving cakes, ready to grab on a Tuesday evening."
+  - id: whole-cakes
+    name: "Whole cakes"
+    blurb: "Family-size, hand-built. Order ahead by 45 minutes."
+  - id: catering
+    name: "Catering"
+    blurb: "Boxes for offices and gatherings. 90-minute lead time."
+  - id: custom
+    name: "Custom"
+    blurb: "Personal celebration cakes — reviewed by the team before we confirm."
+
+business:
+  name: HappyCake
+  legal_name: HappyCake US
+  tagline: "It's just like homemade."
+  slogan: "The original taste of happiness."
+  location:
+    city: "Sugar Land"
+    state: "Texas"
+    region: "Houston metro"
+  hours:
+    mon: "10:00–19:00"
+    tue: "10:00–19:00"
+    wed: "10:00–19:00"
+    thu: "10:00–19:00"
+    fri: "10:00–20:00"
+    sat: "09:00–20:00"
+    sun: "10:00–17:00"
+  channels:
+    website: "https://happycake.us"
+    whatsapp: "send a message on WhatsApp"
+  closing_pattern: "Order on the site at happycake.us or send a message on WhatsApp."

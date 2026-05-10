@@ -1,0 +1,52 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCatalog, priceLabel } from '../lib/catalog';
+
+const catalog = getCatalog();
+const featured = catalog.products.filter(p => p.tags.includes('classic') || p.tags.includes('signature'));
+---
+<Layout title="HappyCake — homemade cakes in Sugar Land">
+  <section class="container hero">
+    <div class="copy">
+      <h1>It's just like homemade.</h1>
+      <p class="lead">HappyCake makes the kind of cakes you remember. Tender layers, real cream, baked in our Sugar Land kitchen and ready by closing time.</p>
+      <p>
+        <a href="/catalog/" class="cta-link" style="background:var(--happy-blue);color:white;padding:0.7rem 1.4rem;border-radius:8px;text-decoration:none;font-weight:500;display:inline-block;">See today's cakes</a>
+      </p>
+    </div>
+    <img src="/images/happy-cake-hero-01.webp" alt="A whole honey cake on the counter at HappyCake Sugar Land." />
+  </section>
+
+  <section class="container">
+    <h2>Today's classics</h2>
+    <div class="grid">
+      {featured.map(p => (
+        <article class="card">
+          <a href={`/product/${p.slug}/`}>
+            <img src={p.photo} alt={p.name} loading="lazy" />
+          </a>
+          <div class="body">
+            <h3 set:html={p.display_name} />
+            <p>{p.description}</p>
+            <div class="meta">
+              <span class="price">{priceLabel(p)}</span>
+              <span class="weight">{p.weight}</span>
+            </div>
+            <a href={`/product/${p.slug}/`} class="cta">View</a>
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="container">
+    <h2>How ordering works</h2>
+    <ol>
+      <li>Pick a cake on the catalog or send us a message.</li>
+      <li>Tell us the date and pickup time. We confirm within the hour.</li>
+      <li>Whole cakes need 45 minutes' notice; catering 90 minutes; custom 3 hours and a quick chat.</li>
+      <li>Pickup at the Sugar Land kitchen, or ask about local delivery.</li>
+    </ol>
+    <p>{catalog.business.closing_pattern}</p>
+  </section>
+</Layout>

@@ -1,0 +1,56 @@
+---
+// On-site assistant widget — POSTs to wrapper /chat.
+// Wrapper URL is configured via PUBLIC_WRAPPER_URL env at build time, defaults to relative /chat.
+const wrapperUrl = import.meta.env.PUBLIC_WRAPPER_URL ?? 'http://localhost:8000';
+---
+<button id="assistant-fab" class="assistant-fab" aria-label="Chat with HappyCake" title="Ask HappyCake">💬</button>
+<div id="assistant-panel" class="assistant-panel" role="dialog" aria-label="HappyCake assistant">
+  <header>Ask HappyCake</header>
+  <div class="messages" id="assistant-messages">
+    <div class="msg bot"><span class="bubble">Hi, friend. Ask about today's cakes, sizes, allergens, or pickup. Order on the site or send a message on WhatsApp.</span></div>
+  </div>
+  <form id="assistant-form" autocomplete="off">
+    <input id="assistant-input" name="q" placeholder="What's on the counter today?" required />
+    <button type="submit">Send</button>
+  </form>
+</div>
+<script is:inline define:vars={{ wrapperUrl }}>
+  const fab = document.getElementById('assistant-fab');
+  const panel = document.getElementById('assistant-panel');
+  const form = document.getElementById('assistant-form');
+  const input = document.getElementById('assistant-input');
+  const messages = document.getElementById('assistant-messages');
+
+  fab.addEventListener('click', () => panel.classList.toggle('open'));
+
+  function addMessage(role, text) {
+    const el = document.createElement('div');
+    el.className = 'msg ' + role;
+    const bubble = document.createElement('span');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+    el.appendChild(bubble);
+    messages.appendChild(el);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    addMessage('you', text);
+    input.value = '';
+    addMessage('bot', '…');
+    try {
+      const r = await fetch(wrapperUrl + '/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text }),
+      });
+      const data = await r.json();
+      messages.lastChild.querySelector('.bubble').textContent = data.reply || 'Sorry — let me get back to you on WhatsApp.';
+    } catch (err) {
+      messages.lastChild.querySelector('.bubble').textContent = 'The site assistant is offline. Send a message on WhatsApp or order at happycake.us.';
+    }
+  });
+</script>

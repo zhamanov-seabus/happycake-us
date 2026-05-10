@@ -1,0 +1,93 @@
+---
+import '../styles/global.css';
+import Assistant from '../components/Assistant.astro';
+import { getCatalog } from '../lib/catalog';
+
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+}
+
+const { title, description, ogImage } = Astro.props;
+const catalog = getCatalog();
+const b = catalog.business;
+
+const fullTitle = title.includes(b.name) ? title : `${title} — ${b.name}`;
+const desc = description ?? `${b.tagline} ${b.slogan} HappyCake in Sugar Land, Texas.`;
+const og = ogImage ?? '/images/happy-cake-hero-01.webp';
+
+// LocalBusiness JSON-LD — present on every page
+const localBusiness = {
+  '@context': 'https://schema.org',
+  '@type': 'Bakery',
+  name: b.name,
+  legalName: b.legal_name,
+  slogan: b.slogan,
+  url: 'https://happycake.us',
+  image: 'https://happycake.us/images/happy-cake-hero-01.webp',
+  logo: 'https://happycake.us/images/logo.png',
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: b.location.city,
+    addressRegion: b.location.state,
+    addressCountry: 'US',
+  },
+  servesCuisine: 'Bakery, Desserts',
+  priceRange: '$$',
+  openingHoursSpecification: Object.entries(b.hours).map(([day, range]) => ({
+    '@type': 'OpeningHoursSpecification',
+    dayOfWeek: day.charAt(0).toUpperCase() + day.slice(1),
+    opens: range.split('–')[0],
+    closes: range.split('–')[1],
+  })),
+};
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={desc} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={desc} />
+    <meta property="og:image" content={`https://happycake.us${og}`} />
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/png" href="/images/logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <script type="application/ld+json" set:html={JSON.stringify(localBusiness)} />
+  </head>
+  <body>
+    <header class="site">
+      <div class="bar">
+        <a href="/" class="brand">
+          <img src="/images/logo.png" alt="HappyCake logo" />
+          <span class="name">HappyCake</span>
+        </a>
+        <nav>
+          <a href="/catalog/">Catalog</a>
+          <a href="/policies/">Policies</a>
+          <a href="/about/">About</a>
+        </nav>
+      </div>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="site">
+      <div class="container">
+        <div>
+          <strong>HappyCake</strong> — {b.location.city}, {b.location.state}.<br />
+          {b.tagline}
+        </div>
+        <div>
+          {b.closing_pattern}
+        </div>
+      </div>
+    </footer>
+    <Assistant />
+  </body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "happycake": {
+      "url": "https://www.steppebusinessclub.com/api/mcp",
+      "headers": {
+        "X-Team-Token": "${SBC_TEAM_TOKEN}"
+      }
+    }
+  }
+}
