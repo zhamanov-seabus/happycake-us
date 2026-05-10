@@ -30,6 +30,7 @@ from .config import TELEGRAM_BOT_TOKEN, TELEGRAM_OWNER_CHAT_ID
 log = logging.getLogger("happycake.owner_bot")
 
 # pending[order_id] = full handoff dict; resolved when the owner taps a button.
+# Persisted to data/pending.json so a wrapper restart doesn't drop pending orders.
 _pending: dict[str, dict[str, Any]] = {}
 # After Edit: chat_id → {order_id, handoff, expires_at}. Next non-command text
 # message from that chat is forwarded to the customer on their channel.
@@ -39,6 +40,37 @@ EDIT_TIMEOUT_SECONDS = 600
 _decision_handlers: list[Callable[[str, str, dict[str, Any]], Awaitable[None]]] = []
 # Callbacks fired when the owner sends a free-form edit message after tapping Edit.
 _edit_message_handlers: list[Callable[[str, str, dict[str, Any]], Awaitable[None]]] = []
+
+# ---------- Pending-order durability ----------
+
+from pathlib import Path
+from .config import REPO_ROOT
+
+_PENDING_PATH = REPO_ROOT / "data" / "pending.json"
+
+
+def _save_pending() -> None:
+    """Atomic write of _pending to disk so a wrapper restart doesn't lose orders."""
+    try:
+        _PENDING_PATH.parent.mkdir(parents=True, exist_ok=True)
+        tmp = _PENDING_PATH.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(_pending, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(_PENDING_PATH)
+    except Exception as e:
+        log.warning("could not persist pending: %s", e)
+
+
+def _load_pending() -> None:
+    """Re-hydrate _pending from disk on first get_app() call."""
+    if not _PENDING_PATH.exists():
+        return
+    try:
+        data = json.loads(_PENDING_PATH.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            _pending.update(data)
+            log.info("rehydrated %d pending order(s) from %s", len(data), _PENDING_PATH)
+    except Exception as e:
+        log.warning("could not load pending: %s", e)
 
 
 @dataclass
@@ -136,6 +168,7 @@ def get_app() -> Application:
     if _app is None:
         if not TELEGRAM_BOT_TOKEN:
             raise RuntimeError("TELEGRAM_BOT_TOKEN missing — set it in .env")
+        _load_pending()
         _app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
         _app.add_handler(CommandHandler("start", _on_start))
         _app.add_handler(CommandHandler("help", _on_help))
@@ -145,6 +178,7 @@ def get_app() -> Application:
         _app.add_handler(CommandHandler("post", _owner_only(_on_post)))
         _app.add_handler(CommandHandler("purchase", _owner_only(_on_purchase)))
         _app.add_handler(CommandHandler("restock", _owner_only(_on_restock)))
+        _app.add_handler(CommandHandler("audit", _owner_only(_on_audit)))
         _app.add_handler(CallbackQueryHandler(_owner_only(_on_callback), pattern=r"^order:"))
         _app.add_handler(CallbackQueryHandler(_owner_only(_on_post_callback), pattern=r"^post:"))
         # Free-form text from the owner is treated as a follow-up after Edit.
@@ -184,6 +218,7 @@ async def send_handoff(h: Handoff) -> None:
         "notes": h.notes,
         "raw_decision": h.raw_decision,
     }
+    _save_pending()
     app = get_app()
     await app.bot.send_message(
         chat_id=TELEGRAM_OWNER_CHAT_ID,
@@ -210,6 +245,7 @@ async def _on_help(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         "<b>HappyCake owner bot — commands</b>\n\n"
         "• <code>/today</code> — pending order cards\n"
+        "• <code>/audit [YYYY-MM-DD]</code> — events from evidence/log.jsonl for that UTC day\n"
         "• <code>/menu</code> — catalog with prices + live inventory + capacity\n"
         "• <code>/report</code> — POS revenue / kitchen load / lead funnel snapshot\n"
         "• <code>/post &lt;theme&gt;</code> — draft an Instagram post for your approval, e.g. <code>/post Friday bake batch</code>\n\n"
@@ -401,6 +437,65 @@ async def _on_today(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text("Pending:\n" + "\n".join(lines), parse_mode="HTML")
 
 
+async def _on_audit(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """`/audit [YYYY-MM-DD]` — pulls events from evidence/log.jsonl for the
+    given day (default: today). Gives the owner the audit trail without SSH."""
+    args = ctx.args or []
+    target = args[0] if args else None  # YYYY-MM-DD
+    if not target:
+        from datetime import datetime, timezone
+        target = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    log_path = REPO_ROOT / "evidence" / "log.jsonl"
+    if not log_path.exists():
+        await update.message.reply_text(f"No evidence log at {log_path}.")
+        return
+
+    counts: dict[str, int] = {}
+    samples: list[str] = []
+    e = html.escape
+    try:
+        with log_path.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except Exception:
+                    continue
+                ts = str(row.get("ts") or row.get("timestamp") or "")
+                if not ts.startswith(target):
+                    continue
+                etype = str(row.get("type") or row.get("event") or "?")
+                counts[etype] = counts.get(etype, 0) + 1
+                if len(samples) < 8 and etype in {
+                    "owner_handoff", "owner_decision", "purchase_alert",
+                    "inventory_shortfall", "franchise_inquiry", "restock",
+                }:
+                    short = (row.get("payload") or {})
+                    label = str(short.get("order_id") or short.get("name") or short.get("city") or short)[:60]
+                    samples.append(f"<code>{e(ts[11:19])}</code> {e(etype)} — {e(label)}")
+    except Exception as ex:
+        await update.message.reply_text(f"Couldn't read audit log: {ex}")
+        return
+
+    if not counts:
+        await update.message.reply_text(f"No events on {target}. (UTC dates; the file is at evidence/log.jsonl.)")
+        return
+
+    total = sum(counts.values())
+    top = sorted(counts.items(), key=lambda kv: -kv[1])
+    lines = [f"<b>Audit — {e(target)}</b> · {total} events"]
+    for k, n in top[:12]:
+        lines.append(f"  · <code>{e(k)}</code> × {n}")
+    if samples:
+        lines.append("")
+        lines.append("<b>Highlights</b>")
+        lines.extend(samples)
+    await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+
+
 async def _on_callback(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
     q = update.callback_query
     await q.answer()
@@ -409,6 +504,7 @@ async def _on_callback(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
         return
     _, verb, order_id = parts
     handoff = _pending.pop(order_id, None)
+    _save_pending()
     if not handoff:
         await q.edit_message_text(q.message.text + "\n\n· Already handled.")
         return

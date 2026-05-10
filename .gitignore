@@ -35,5 +35,8 @@ out/
 evidence/log.jsonl
 *.log
 
+# Local mutable state (per-instance, never committed)
+data/pending.json
+
 # Tunnel state
 .ngrok/
