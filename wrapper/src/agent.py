@@ -174,22 +174,68 @@ def _kitchen_id(variation_id: str) -> str:
     return variation_id
 
 
+def _friendly_name(raw_name: str | None) -> str:
+    """Best-effort first name. Skip placeholder names like 'Site visitor'."""
+    if not raw_name:
+        return "friend"
+    placeholders = {"site", "site visitor", "friend", "anonymous", "(unknown)", "guest"}
+    if raw_name.lower().strip() in placeholders:
+        return "friend"
+    return raw_name.split()[0]
+
+
+def _is_real_order(raw: dict[str, Any]) -> bool:
+    """An 'order' handoff has actual items; escalations/FAQs/complaints don't."""
+    return bool(raw.get("items"))
+
+
+def _channel_closing(channel: str) -> str:
+    """The brandbook closing — but only when the customer is on a channel that
+    can act on it. The website chat widget IS the channel; pointing them
+    elsewhere is silly."""
+    if channel == "website":
+        return "Reply here if anything changes."
+    if channel == "instagram":
+        return "Order on the site at happycake.us or send us a message on WhatsApp."
+    if channel == "whatsapp":
+        return "Order on the site at happycake.us — or stay on WhatsApp and we'll take it from here."
+    return "Order on the site at happycake.us or send a message on WhatsApp."
+
+
 def _approval_message(handoff: dict[str, Any]) -> str:
-    name = (handoff.get("customer_name") or "friend").split()[0]
-    items = handoff.get("items_label", "")
-    pickup = handoff.get("pickup_time")
-    parts = [f"Confirmed, {name} — {items}."]
-    if pickup:
-        parts.append(f"Ready by {pickup}.")
-    parts.append("Order on the site at happycake.us or send a message on WhatsApp.")
-    return " ".join(parts)
+    raw = handoff.get("raw_decision", {}) or {}
+    name = _friendly_name(handoff.get("customer_name"))
+    channel = handoff.get("channel", "website")
+    closing = _channel_closing(channel)
+
+    if _is_real_order(raw):
+        items = handoff.get("items_label", "")
+        pickup = handoff.get("pickup_time")
+        parts = [f"Confirmed, {name} — {items}."]
+        if pickup:
+            parts.append(f"Ready by {pickup}.")
+        parts.append(closing)
+        return " ".join(parts)
+
+    # No items — escalation/complaint that the owner has acknowledged.
+    return (
+        f"Got it, {name} — the team has it. We'll be back to you here as soon "
+        f"as there's an answer. {closing}"
+    )
 
 
 def _rejection_message(handoff: dict[str, Any]) -> str:
+    raw = handoff.get("raw_decision", {}) or {}
+    name = _friendly_name(handoff.get("customer_name"))
+    channel = handoff.get("channel", "website")
+    closing = _channel_closing(channel)
+    if _is_real_order(raw):
+        return (
+            f"Sorry, {name} — we can't fit this one in. "
+            f"If you can flex the date or size, tell us here and we'll try again. {closing}"
+        )
     return (
-        "We're sorry — we can't fit this one in today. "
-        "Please reach out on WhatsApp and we'll find another time. "
-        "Order on the site at happycake.us or send a message on WhatsApp."
+        f"Thanks, {name} — we won't be able to help on this one. {closing}"
     )
 
 
