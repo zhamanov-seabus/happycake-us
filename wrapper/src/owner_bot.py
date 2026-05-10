@@ -108,7 +108,11 @@ def get_app() -> Application:
             raise RuntimeError("TELEGRAM_BOT_TOKEN missing — set it in .env")
         _app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
         _app.add_handler(CommandHandler("start", _on_start))
+        _app.add_handler(CommandHandler("help", _on_help))
         _app.add_handler(CommandHandler("today", _on_today))
+        _app.add_handler(CommandHandler("menu", _on_menu))
+        _app.add_handler(CommandHandler("report", _on_report))
+        _app.add_handler(CommandHandler("post", _on_post))
         _app.add_handler(CallbackQueryHandler(_on_callback, pattern=r"^order:"))
         _app.add_handler(CallbackQueryHandler(_on_post_callback, pattern=r"^post:"))
         # Free-form text from the owner is treated as a follow-up after Edit.
@@ -142,9 +146,108 @@ async def send_handoff(h: Handoff) -> None:
 
 async def _on_start(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
-        "HappyCake owner bot is online. Approval cards from customers will appear here.\n"
-        "Use /today to see what's queued."
+        "HappyCake owner bot is online. Approval cards from customers appear here.\n\n"
+        "Commands:\n"
+        "  /today  — pending order cards\n"
+        "  /menu   — today's catalog with prices and inventory\n"
+        "  /report — POS revenue, kitchen load, and lead funnel\n"
+        "  /post <theme> — draft an Instagram post for your approval\n"
+        "  /help   — this list"
     )
+
+
+async def _on_help(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(
+        "<b>HappyCake owner bot — commands</b>\n\n"
+        "• <code>/today</code> — pending order cards\n"
+        "• <code>/menu</code> — catalog with prices + live inventory + capacity\n"
+        "• <code>/report</code> — POS revenue / kitchen load / lead funnel snapshot\n"
+        "• <code>/post &lt;theme&gt;</code> — draft an Instagram post for your approval, e.g. <code>/post Friday bake batch</code>\n\n"
+        "Tap ✅ Approve / ✏️ Edit / ❌ Reject on any order card. Edit asks you for a follow-up message that gets sent to the customer on their channel.",
+        parse_mode="HTML",
+    )
+
+
+async def _on_menu(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show the catalog with live inventory + capacity, pulled from sandbox."""
+    from . import mcp_client
+    try:
+        cat = mcp_client.call("square_list_catalog", {"limit": 50}) or {}
+        capacity = mcp_client.call("kitchen_get_capacity", {}) or {}
+        items = cat.get("catalog", []) if isinstance(cat, dict) else []
+        lines = ["<b>Today on the menu</b>"]
+        for it in items:
+            cents = it.get("priceCents", 0) / 100
+            lines.append(f"• {it.get('name')} — ${cents:.2f} <i>({it.get('category')})</i>")
+        if capacity:
+            lines.append("")
+            lines.append(
+                f"<b>Kitchen:</b> {capacity.get('remainingCapacityMinutes',0)} min remaining "
+                f"of {capacity.get('dailyCapacityMinutes',0)} (default lead "
+                f"{capacity.get('defaultLeadTimeMinutes',45)} min · "
+                f"{capacity.get('queuedTickets',0)} queued)"
+            )
+        await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+    except Exception as e:
+        await update.message.reply_text(f"Couldn't pull menu — {e}")
+
+
+async def _on_report(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """Daily-style summary: POS revenue, kitchen production, marketing funnel."""
+    from . import mcp_client
+    try:
+        pos = mcp_client.call("square_get_pos_summary", {}) or {}
+        kitchen = mcp_client.call("kitchen_get_production_summary", {}) or {}
+        marketing_report = mcp_client.call("marketing_report_to_owner", {}) or {}
+        evidence_summary = mcp_client.call("evaluator_get_evidence_summary", {}) or {}
+
+        lines = ["<b>HappyCake — operator report</b>"]
+        if pos:
+            lines.append(
+                f"\n<b>POS:</b> {pos.get('orders',{}).get('total','?')} orders · "
+                f"${(pos.get('revenue',{}).get('totalCents',0)/100):.2f} revenue"
+            ) if isinstance(pos.get('orders'), dict) else lines.append(f"\n<b>POS:</b> {html.escape(str(pos))[:200]}")
+        if kitchen:
+            byst = kitchen.get("byStatus", {}) or {}
+            lines.append(
+                f"\n<b>Kitchen:</b> {kitchen.get('tickets','?')} tickets · "
+                f"{byst.get('queued',0)} queued · {byst.get('accepted',0)} accepted · "
+                f"{byst.get('ready',0)} ready · {byst.get('rejected',0)} rejected · "
+                f"{kitchen.get('usedPrepMinutes','?')} min used / "
+                f"{kitchen.get('dailyCapacityMinutes','?')} cap"
+            )
+        if isinstance(marketing_report, dict):
+            campaigns = marketing_report.get("campaigns") or marketing_report
+            lines.append(f"\n<b>Marketing report:</b> {html.escape(str(campaigns))[:300]}")
+        if isinstance(evidence_summary, dict):
+            c = evidence_summary.get("counts") or {}
+            lines.append(
+                f"\n<b>Evidence counts:</b> orders {c.get('squareOrders','?')} · "
+                f"tickets {c.get('kitchenTickets','?')} · WA in {c.get('whatsappInbound','?')} · "
+                f"IG actions {c.get('instagramActions','?')} · campaigns {c.get('marketingCampaigns','?')} · leads {c.get('marketingLeads','?')}"
+            )
+        await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+    except Exception as e:
+        await update.message.reply_text(f"Report failed — {e}")
+
+
+async def _on_post(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """`/post <theme>` triggers the marketing creative pipeline."""
+    args = ctx.args or []
+    theme = " ".join(args).strip()
+    if not theme:
+        await update.message.reply_text("Usage: /post <theme>. Example: /post Friday bake batch")
+        return
+    from . import marketing as marketing_mod
+    try:
+        out = await marketing_mod.queue_for_owner_approval(theme=theme, audience="")
+        await update.message.reply_text(
+            f"Drafted post <code>{html.escape(out['scheduled_id'])}</code>. "
+            f"Approval card incoming above.",
+            parse_mode="HTML",
+        )
+    except Exception as e:
+        await update.message.reply_text(f"Couldn't draft post — {e}")
 
 
 async def _on_today(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:

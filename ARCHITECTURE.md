@@ -229,6 +229,23 @@ For Linux, an equivalent systemd unit lives in `deploy/` (TODO if needed).
 
 ---
 
+## Innovation log (what we did differently)
+
+The brief's **Innovation and Depth Spotter** pass looks for surprising original moves. Here is what's deliberately non-obvious in this submission, with why each choice came up.
+
+1. **One pre-packed `claude -p` call instead of a chain.** Every customer message goes through ONE invocation that already contains brandbook + live catalog + channel rules + output schema. Latency: ~5–8s instead of 15–25s with a classify→inventory→reply chain. Trade-off: the agent has to do everything in one decision; that's why the system prompt is explicit about JSON-only output and intent classification.
+2. **Channel-aware closing rules** baked into the prompt. The brandbook closes with "Order on the site at happycake.us or send a message on WhatsApp." That makes sense on IG/WA — but on the on-site chat widget the customer is *already* on the site, and there's no real WhatsApp number in this build. The prompt distinguishes channels so the website agent never tells customers to leave the site.
+3. **Edit verb that completes**, not a placeholder. After ✏️ Edit, the bot prompts the owner with a `ForceReply`; whatever they type next gets relayed to the customer on their channel (IG / WA / website widget polling). The Telegram-only-owner-UI rule is preserved while keeping the customer's experience un-broken.
+4. **Polling fallback for Cloudflare quick-tunnel SSE buffering.** Cloudflare's free quick tunnels buffer `text/event-stream` indefinitely. We kept the SSE endpoint for clients on un-buffered proxies but the chat widget polls `/order/{id}` every 2.5s. Both code paths share one `order_events` pub/sub.
+5. **Webhook ack-immediately + async processing.** Sandbox forwarder times out fast; `claude -p` takes seconds. Webhooks log + spawn an `asyncio.create_task` and return 202 in milliseconds, which makes the sandbox happy without compromising agent correctness.
+6. **Meta envelope handling for both shapes.** Sandbox forwards Instagram comments via `entry[].changes[].field=='comments'` and DMs via `entry[].messaging[].message.text` — the WhatsApp Business API and Messenger Platform have different shapes. `_extract_message` and `_extract_comment` cover both.
+7. **`/configure` as a deterministic agent surface.** Instead of forcing an external AI to scrape the `/custom/` HTML form, the wrapper exposes a `POST /configure` that returns a structured recommendation with allergen warning, lead time, and a next-step instruction pointing at `/chat`.
+8. **Marketing creatives use the same one-prompt pattern.** `/marketing/draft` runs `claude -p` against the brandbook to produce a JSON draft (caption + image_role + image_index + rationale). The owner taps Approve in Telegram and only THEN the post publishes — staying within the brief's "owner approval before publish" constraint.
+9. **One source of truth for catalog drives three consumers.** `data/catalog.yml` feeds the Astro site (build-time read), `/api/catalog.json` (machine-readable), and the agent system prompt (live catalog block injected per request). No risk of drift; renaming a variation_id changes everything in one commit.
+10. **Build-time MCP fetch for the agent-friendly inventory API.** `web/src/lib/sandbox.ts` calls `square_get_inventory` and `kitchen_get_capacity` at `astro build` time — so `https://happycake.us/api/inventory.json` returns live data without a runtime server, and the homepage capacity badge reflects sandbox state on every Pages deploy.
+
+---
+
 ## What we deliberately did not build
 
 - **WhatsApp Business API integration** beyond the sandbox simulator (per brief §4, real WhatsApp prod access is forbidden).
