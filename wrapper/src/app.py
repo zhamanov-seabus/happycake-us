@@ -235,6 +235,14 @@ async def franchise(request: Request, payload: FranchiseIn) -> dict:
     if errors:
         return {"ok": False, "error": "missing_or_invalid", "fields": errors}
 
+    # Score the lead. Hot leads (≥75) get a 🔥 prefix in the Telegram card so
+    # the owner can prioritise. Logged alongside the raw inquiry so the audit
+    # trail shows both the score and the reasoning.
+    from . import franchise_score as fs_module
+    fs = fs_module.score({
+        "capital": capital, "timeline": timeline, "city": city, "message": message,
+    })
+
     evidence.log("franchise_inquiry", "website", {
         "name": name[:80],
         "email": email,
@@ -243,19 +251,31 @@ async def franchise(request: Request, payload: FranchiseIn) -> dict:
         "capital": capital,
         "timeline": timeline,
         "message": message[:1000],
+        "score": fs.total,
+        "score_label": fs.label,
+        "score_breakdown": {
+            "capital": fs.capital,
+            "timeline": fs.timeline,
+            "city_tier": fs.city_tier,
+            "text_quality": fs.text_quality,
+        },
     })
 
     try:
         import html
         e = html.escape
+        emoji = fs.emoji()
+        title_suffix = f" — score {fs.total}/100 ({fs.label.upper()})"
         text = (
-            f"🤝 <b>Franchise inquiry — Texas</b>\n"
+            f"{emoji} <b>Franchise inquiry — Texas</b>{title_suffix}\n"
             f"<b>From:</b> {e(name)}\n"
             f"<b>Contact:</b> {e(email)} · {e(phone)}\n"
             f"<b>City:</b> {e(city)}\n"
             f"<b>Capital:</b> {e(capital)}\n"
             f"<b>Timeline:</b> {e(timeline)}\n"
             + (f"\n<i>Note:</i> {e(message[:600])}" if message else "")
+            + "\n\n<i>Score breakdown:</i>\n"
+            + "\n".join(f"  · {e(r)}" for r in fs.reasons)
         )
         await owner_bot.send_fyi(text)
     except Exception as ex:
