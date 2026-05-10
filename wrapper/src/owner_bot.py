@@ -5,6 +5,7 @@ app's lifespan. Inline keyboards carry callback_data of the form `order:<verb>:<
 """
 from __future__ import annotations
 import asyncio
+import html
 import json
 import logging
 from dataclasses import dataclass, field
@@ -51,17 +52,18 @@ def register_decision_handler(fn: Callable[[str, str, dict[str, Any]], Awaitable
 
 
 def _format_card(h: Handoff) -> str:
+    e = html.escape  # Telegram HTML mode is strict about <, >, &
     lines = [
-        f"<b>New {h.channel} order</b> — {h.customer_name}",
-        f"@{h.customer_handle}",
+        f"<b>New {e(h.channel)} order</b> — {e(h.customer_name)}",
+        f"@{e(h.customer_handle)}",
         "",
-        f"<b>Items:</b> {h.items_label}",
+        f"<b>Items:</b> {e(h.items_label)}",
     ]
     if h.pickup_time:
-        lines.append(f"<b>Pickup:</b> {h.pickup_time}")
+        lines.append(f"<b>Pickup:</b> {e(h.pickup_time)}")
     if h.notes:
-        lines.append(f"<b>Notes:</b> {h.notes}")
-    lines.append(f"\n<i>Order ID:</i> <code>{h.order_id}</code>")
+        lines.append(f"<b>Notes:</b> {e(h.notes)}")
+    lines.append(f"\n<i>Order ID:</i> <code>{e(h.order_id)}</code>")
     return "\n".join(lines)
 
 
@@ -125,7 +127,8 @@ async def _on_today(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
     if not _pending:
         await update.message.reply_text("Nothing pending right now. We're caught up.")
         return
-    lines = [f"<code>{oid}</code> · {p['items_label']}" for oid, p in _pending.items()]
+    e = html.escape
+    lines = [f"<code>{e(oid)}</code> · {e(p['items_label'])}" for oid, p in _pending.items()]
     await update.message.reply_text("Pending:\n" + "\n".join(lines), parse_mode="HTML")
 
 
@@ -138,13 +141,11 @@ async def _on_callback(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
     _, verb, order_id = parts
     handoff = _pending.pop(order_id, None)
     if not handoff:
-        await q.edit_message_text(q.message.text + f"\n\n<i>Already handled.</i>", parse_mode="HTML")
+        # Edit in plain text — q.message.text is already rendered, no HTML safe to re-parse.
+        await q.edit_message_text(q.message.text + "\n\n· Already handled.")
         return
     icon = {"approve": "✅", "edit": "✏️", "reject": "❌"}.get(verb, "·")
-    await q.edit_message_text(
-        f"{q.message.text}\n\n<b>{icon} {verb.capitalize()}ed</b>",
-        parse_mode="HTML",
-    )
+    await q.edit_message_text(f"{q.message.text}\n\n{icon} {verb.capitalize()}ed")
     evidence.log("owner_decision", handoff["channel"], {"order_id": order_id, "decision": verb})
     for fn in _decision_handlers:
         try:

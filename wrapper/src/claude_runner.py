@@ -11,14 +11,33 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from . import evidence
-from .config import REPO_ROOT, SBC_TEAM_TOKEN
+from .config import CATALOG_PATH, REPO_ROOT, SBC_TEAM_TOKEN
 
 SYSTEM_PROMPT_PATH = Path(__file__).parent / "prompts" / "system.md"
 
 
+def _catalog_block() -> str:
+    """Render an inline catalog table with the canonical variation_ids the agent must use."""
+    cat = yaml.safe_load(CATALOG_PATH.read_text(encoding="utf-8"))
+    rows = ["| variation_id | display | price | weight | category | notes |", "|---|---|---|---|---|---|"]
+    for p in cat["products"]:
+        notes = []
+        if p.get("requires_owner_approval"):
+            notes.append("requires owner approval")
+        if p.get("lead_time_minutes"):
+            notes.append(f"{p['lead_time_minutes']}-min lead")
+        rows.append(
+            f"| `{p['variation_id']}` | {p['display_name']} | ${p['price_usd']:.2f} | {p['weight']} | {p['category']} | {'; '.join(notes) or '—'} |"
+        )
+    return "\n".join(rows)
+
+
 def _load_system_prompt() -> str:
-    return SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
+    base = SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
+    return f"{base}\n\n## Live catalog (variation_ids to use in `items[*].variation_id`)\n\n{_catalog_block()}\n"
 
 
 def _strip_fence(text: str) -> str:

@@ -28,7 +28,8 @@ def _format_items(items: list[dict[str, Any]] | None) -> str:
         if prod:
             parts.append(f'{it.get("quantity", 1)}× {prod["display_name"]} — ${prod["price_usd"]:.2f}')
         else:
-            parts.append(f'{it.get("quantity", 1)}× <unknown {it.get("variation_id")}>')
+            unknown = it.get("variation_id", "")
+            parts.append(f'{it.get("quantity", 1)}× [unrecognised variation: {unknown}]')
     return ", ".join(parts)
 
 
@@ -96,14 +97,25 @@ async def on_owner_decision(order_id: str, verb: str, handoff: dict[str, Any]) -
     if verb == "approve":
         items = raw.get("items") or []
         if items:
+            # Convert snake_case (agent / catalog convention) → camelCase (sandbox API)
+            square_items = [
+                {
+                    "variationId": it["variation_id"],
+                    "quantity": it.get("quantity", 1),
+                    **({"note": it["note"]} if it.get("note") else {}),
+                }
+                for it in items
+            ]
             try:
                 order_resp = mcp_client.call("square_create_order", {
-                    "items": items,
+                    "items": square_items,
                     "source": channel,
                     "customerName": handoff.get("customer_name") or "Friend",
                     "customerNote": handoff.get("notes") or "",
                 })
-                square_order_id = (order_resp or {}).get("orderId") or (order_resp or {}).get("id")
+                # Response shape: { mode, order: { id, ... }, kitchenTool }
+                order_obj = (order_resp or {}).get("order") if isinstance(order_resp, dict) else None
+                square_order_id = (order_obj or {}).get("id")
                 evidence.log("mcp_call", "system", {"tool": "square_create_order", "ok": True, "id": square_order_id})
 
                 if square_order_id:
