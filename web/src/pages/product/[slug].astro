@@ -7,11 +7,14 @@ export function getStaticPaths() {
   const catalog = getCatalog();
   return catalog.products.map((product: Product) => ({
     params: { slug: product.slug },
-    props: { product, business: catalog.business },
+    props: { product, business: catalog.business, allProducts: catalog.products },
   }));
 }
 
-const { product: p, business: b } = Astro.props;
+const { product: p, business: b, allProducts } = Astro.props;
+const pairs: Product[] = (p.pairs_with ?? [])
+  .map((slug: string) => (allProducts as Product[]).find(x => x.slug === slug))
+  .filter((x): x is Product => Boolean(x));
 
 const siteRoot = Astro.site?.toString().replace(/\/$/, '') ?? '';
 
@@ -87,11 +90,36 @@ const productJsonLd = {
 
       <div class="order-note">
         <p>
-          <strong>To order:</strong> tap the button above to start a chat with HappyCake right here, or send a message on WhatsApp. We confirm within the hour.<br />
+          <strong>To order:</strong> tap the button above to start a chat with HappyCake right here. We confirm within the hour.<br />
           <em>{b.closing_pattern}</em>
         </p>
       </div>
     </div>
   </section>
+
+  {pairs.length > 0 && (
+    <section class="container">
+      <h2>Often ordered together</h2>
+      <div class="grid">
+        {pairs.map((pp: Product) => (
+          <article class="card">
+            <a href={withBase(`/product/${pp.slug}/`)}>
+              <img src={withBase(pp.photo)} alt={pp.name} loading="lazy" />
+            </a>
+            <div class="body">
+              <h3 set:html={pp.display_name} />
+              <p>{pp.description}</p>
+              <div class="meta">
+                <span class="price">{priceLabel(pp)}</span>
+                <span class="weight">{pp.weight}</span>
+              </div>
+              <a href={withBase(`/product/${pp.slug}/`)} class="cta">View</a>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  )}
+
   <script type="application/ld+json" set:html={JSON.stringify(productJsonLd)} />
 </Layout>

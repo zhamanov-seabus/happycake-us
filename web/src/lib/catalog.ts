@@ -29,6 +29,7 @@ export interface Product {
   requires_owner_approval?: boolean;
   allergens?: Allergens;
   dietary?: string[];
+  pairs_with?: string[];
 }
 
 export interface Category {

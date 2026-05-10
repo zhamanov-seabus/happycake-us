@@ -21,6 +21,7 @@ products:
       contains: [dairy, egg, wheat]
       traces: [tree_nuts]
     dietary: [vegetarian]
+    pairs_with: [pistachio-roll, office-dessert-box]
 
   - id: sq_item_whole_honey_cake
     variation_id: sq_var_whole_honey_cake
@@ -39,6 +40,7 @@ products:
       contains: [dairy, egg, wheat]
       traces: [tree_nuts]
     dietary: [vegetarian]
+    pairs_with: [pistachio-roll, office-dessert-box]
 
   - id: sq_item_pistachio_roll
     variation_id: sq_var_pistachio_roll
@@ -56,6 +58,7 @@ products:
       contains: [dairy, egg, wheat, tree_nuts]
       traces: []
     dietary: [vegetarian]
+    pairs_with: [honey-cake-slice, whole-honey-cake]
 
   - id: sq_item_custom_birthday_cake
     variation_id: sq_var_custom_birthday_cake
@@ -76,6 +79,7 @@ products:
       traces: [tree_nuts, soy]
       note: "Decoration may add additional allergens — confirmed during the custom-cake review."
     dietary: [vegetarian]
+    pairs_with: [office-dessert-box, whole-honey-cake]
 
   - id: sq_item_office_dessert_box
     variation_id: sq_var_office_dessert_box
@@ -95,6 +99,7 @@ products:
       traces: [soy]
       note: "Assortment varies daily; we can pull tree-nut items on request with 24-hour notice."
     dietary: [vegetarian]
+    pairs_with: [whole-honey-cake, custom-birthday-cake]
 
 # How to read the allergen block:
 # - contains: ingredients knowingly used in this product

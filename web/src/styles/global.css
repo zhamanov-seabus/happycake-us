@@ -50,9 +50,15 @@ header.site .bar {
 header.site a.brand { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; }
 header.site .brand img { width: 36px; height: 36px; border-radius: 8px; }
 header.site .brand .name { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; font-weight: 600; color: var(--happy-blue); }
-header.site nav { display: flex; gap: 1.4rem; font-size: 0.95rem; }
-header.site nav a { text-decoration: none; color: var(--ink); }
+header.site nav { display: flex; gap: 1.4rem; font-size: 0.95rem; flex-wrap: wrap; justify-content: flex-end; }
+header.site nav a { text-decoration: none; color: var(--ink); padding: 0.4rem 0; min-height: 32px; }
 header.site nav a:hover { color: var(--happy-blue); }
+
+@media (max-width: 600px) {
+  header.site .bar { flex-wrap: wrap; gap: 0.6rem; }
+  header.site nav { gap: 0.9rem; font-size: 0.88rem; width: 100%; justify-content: flex-start; }
+  header.site .brand .name { font-size: 1.2rem; }
+}
 
 /* Footer */
 footer.site {
@@ -161,6 +167,7 @@ footer.site .hours { font-size: 0.85rem; line-height: 1.6; max-width: 400px; }
   font-weight: 500;
   font-size: 1rem;
   padding: 0.85rem 1.6rem;
+  min-height: 44px;
   border-radius: 10px;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(27, 72, 104, 0.18);
@@ -212,7 +219,10 @@ footer.site .hours { font-size: 0.85rem; line-height: 1.6; max-width: 400px; }
   font-size: 1.4rem;
   box-shadow: 0 6px 20px rgba(27, 72, 104, 0.3);
   z-index: 100;
+  min-height: 44px;
+  min-width: 44px;
 }
+.assistant-panel form button { min-height: 44px; }
 .assistant-panel {
   position: fixed;
   bottom: 5.5rem;
@@ -236,6 +246,23 @@ footer.site .hours { font-size: 0.85rem; line-height: 1.6; max-width: 400px; }
   font-family: 'Cormorant Garamond', serif;
   font-size: 1.15rem;
 }
+.assistant-panel header .quick-asks {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+.assistant-panel header .quick-asks .quick {
+  background: rgba(255, 255, 255, 0.16);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.78rem;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+}
+.assistant-panel header .quick-asks .quick:hover { background: rgba(255, 255, 255, 0.28); }
 .assistant-panel .messages {
   flex: 1;
   padding: 1rem;
@@ -295,6 +322,16 @@ footer.site .hours { font-size: 0.85rem; line-height: 1.6; max-width: 400px; }
 .review-card .stars { font-size: 0.95rem; margin-bottom: 0.5rem; }
 .review-card p { line-height: 1.5; margin: 0 0 0.6rem; }
 .review-card footer { color: var(--muted); font-size: 0.85rem; }
+
+/* Lead capture */
+.lead-section .lead-card { background: white; border: 1px solid var(--line); border-radius: 14px; padding: 1.6rem 1.8rem; }
+.lead-section .lead-card h2 { margin-top: 0; }
+.lead-form { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.8rem; }
+.lead-form input { flex: 1; min-width: 220px; padding: 0.7rem 0.9rem; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: var(--cream); min-height: 44px; }
+.lead-form input:focus { outline: none; border-color: var(--happy-blue); background: white; }
+.lead-status { margin-top: 0.6rem; font-size: 0.9rem; color: var(--muted); }
+.lead-status.ok { color: #2c6f3f; }
+.lead-status.err { color: #b54a2c; }
 
 /* Section spacing */
 section { margin: 3rem 0; }

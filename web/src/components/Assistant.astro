@@ -5,9 +5,16 @@ const wrapperUrl = import.meta.env.PUBLIC_WRAPPER_URL ?? 'http://localhost:8000'
 ---
 <button id="assistant-fab" class="assistant-fab" aria-label="Chat with HappyCake" title="Ask HappyCake">💬</button>
 <div id="assistant-panel" class="assistant-panel" role="dialog" aria-label="HappyCake assistant">
-  <header>Ask HappyCake</header>
+  <header>
+    Ask HappyCake
+    <div class="quick-asks">
+      <button type="button" class="quick" data-prefill="What's on the counter today?">Today's cakes</button>
+      <button type="button" class="quick" data-prefill="I want to place an order — what do I need to tell you?">Place an order</button>
+      <button type="button" class="quick" data-prefill="I have a problem with my order — can you help?">Report a problem</button>
+    </div>
+  </header>
   <div class="messages" id="assistant-messages">
-    <div class="msg bot"><span class="bubble">Hi, friend. Ask about today's cakes, sizes, allergens, or pickup. Order on the site or send a message on WhatsApp.</span></div>
+    <div class="msg bot"><span class="bubble">Hi, friend. Ask about today's cakes, sizes, allergens, pickup, or an order you've already placed. The team's a tap away.</span></div>
   </div>
   <form id="assistant-form" autocomplete="off">
     <input id="assistant-input" name="q" placeholder="What's on the counter today?" required />

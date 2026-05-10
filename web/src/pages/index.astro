@@ -92,4 +92,49 @@ const aggregateRating = reviewsData && reviewsData.totalCount > 0 ? {
     </ol>
     <p>{catalog.business.closing_pattern}</p>
   </section>
+
+  <section class="container lead-section">
+    <div class="lead-card">
+      <h2>Friday's bake-batch — first dibs</h2>
+      <p>We bake the freshest assortment on Fridays. Drop your email and we'll send you a heads-up before the batch hits the counter.</p>
+      <form id="lead-form" class="lead-form" autocomplete="off">
+        <input id="lead-email" name="email" type="email" required placeholder="you@example.com" />
+        <button type="submit" class="order-button">Get the heads-up</button>
+      </form>
+      <p id="lead-status" class="lead-status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <script is:inline define:vars={{ wrapperUrl: import.meta.env.PUBLIC_WRAPPER_URL ?? 'http://localhost:8000' }}>
+    const form = document.getElementById('lead-form');
+    const status = document.getElementById('lead-status');
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('lead-email').value.trim();
+        if (!email) return;
+        status.textContent = 'Saving…';
+        status.className = 'lead-status';
+        try {
+          const r = await fetch(wrapperUrl + '/lead', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, intent: 'friday-batch' }),
+          });
+          const j = await r.json();
+          if (j.ok) {
+            status.textContent = j.message || 'Got it.';
+            status.className = 'lead-status ok';
+            form.reset();
+          } else {
+            status.textContent = j.error || 'Could not save just now — try again in a moment.';
+            status.className = 'lead-status err';
+          }
+        } catch (err) {
+          status.textContent = 'Could not reach the system. Try again in a moment.';
+          status.className = 'lead-status err';
+        }
+      });
+    }
+  </script>
 </Layout>

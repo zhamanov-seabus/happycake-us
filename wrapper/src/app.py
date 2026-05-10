@@ -55,6 +55,29 @@ def health() -> dict:
     return {"ok": True, "tunnel": PUBLIC_TUNNEL_URL or None}
 
 
+# ---------- Lead capture ----------
+
+class LeadIn(BaseModel):
+    email: str
+    name: str | None = None
+    intent: str | None = None  # 'friday-batch', 'whole-cakes', etc.
+
+
+@app.post("/lead")
+async def lead(payload: LeadIn) -> dict:
+    """Capture an email signup. Stored in evidence/leads.jsonl for the
+    operator/marketing agent to follow up on. Lightweight email validation."""
+    email = (payload.email or "").strip()
+    if "@" not in email or len(email) > 254:
+        return {"ok": False, "error": "invalid email"}
+    evidence.log("lead_capture", "website", {
+        "email": email,
+        "name": (payload.name or "").strip()[:80],
+        "intent": (payload.intent or "friday-batch").strip()[:40],
+    })
+    return {"ok": True, "message": "Got it — we'll send a heads-up before each Friday batch."}
+
+
 # ---------- On-site chat ----------
 
 class ChatIn(BaseModel):
@@ -96,13 +119,33 @@ async def chat(payload: ChatIn) -> ChatOut:
 
 @app.get("/order/{order_id}")
 async def order_status(order_id: str) -> dict:
+    """Wrapper-side state for an order_id. Used by the chat widget polling
+    and the /order-status/ page on the static site. If the order_id looks
+    like a Square POS id (starts with sq_order_), also fetch the live
+    sandbox state so the customer sees kitchen progress."""
     state = order_events.get_state(order_id)
     history = order_events.get_history(order_id)
+
+    sandbox: dict | None = None
+    if order_id.startswith("sq_order_"):
+        try:
+            from . import mcp_client
+            recent = mcp_client.call("square_recent_orders", {"limit": 50}) or {}
+            orders = recent.get("orders", []) if isinstance(recent, dict) else []
+            match = next((o for o in orders if o.get("id") == order_id), None)
+            if match:
+                tickets = mcp_client.call("kitchen_list_tickets", {}) or []
+                ticket = next((t for t in tickets if t.get("orderId") == order_id), None)
+                sandbox = {"order": match, "ticket": ticket}
+        except Exception as e:
+            evidence.log("error", "system", {"where": "order_status_sandbox_lookup", "error": str(e)})
+
     return {
         "order_id": order_id,
         "status": (state or {}).get("status", "pending_owner"),
         "latest": state,
         "history": history,
+        "sandbox": sandbox,
     }
 
 

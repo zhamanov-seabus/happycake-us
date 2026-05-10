@@ -1,0 +1,120 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCatalog } from '../lib/catalog';
+import { withBase } from '../lib/url';
+
+const b = getCatalog().business;
+---
+<Layout title="Order status" description="Check the status of an existing HappyCake order.">
+  <section class="container prose">
+    <h1>Where's my order?</h1>
+    <p>
+      Enter your order ID — it looks like <code>hc_…</code> (from the chat widget) or
+      <code>sq_order_…</code> (from a confirmation message). We'll look it up on our side and the
+      kitchen.
+    </p>
+
+    <form id="status-form" class="status-form" autocomplete="off">
+      <div class="field">
+        <label for="oid">Order ID</label>
+        <input id="oid" name="order_id" type="text" required placeholder="hc_xxxxxxxx or sq_order_xxxxx" />
+      </div>
+      <button type="submit" class="order-button">Check status →</button>
+    </form>
+
+    <div id="status-result" class="status-result" aria-live="polite"></div>
+
+    <p class="muted">Don't have an ID? <a href={withBase('/')}>Open the chat from any page</a> and we'll find your order.</p>
+  </section>
+
+  <style>
+    .status-form { background: white; border: 1px solid var(--line); border-radius: 14px; padding: 1.4rem 1.5rem; margin: 1.5rem 0; }
+    .status-form .field { margin-bottom: 1rem; }
+    .status-form label { display: block; font-size: 0.85rem; color: var(--ink); font-weight: 500; margin-bottom: 0.3rem; }
+    .status-form input { width: 100%; padding: 0.6rem 0.8rem; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: var(--cream); font-family: 'Menlo', monospace; }
+    .status-form input:focus { outline: none; border-color: var(--happy-blue); background: white; }
+
+    .status-result { margin-top: 1.4rem; }
+    .status-result.empty { display: none; }
+    .status-card { background: white; border: 1px solid var(--line); border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1rem; }
+    .status-card h3 { margin: 0 0 0.6rem; font-family: 'Cormorant Garamond', serif; }
+    .status-badge { display: inline-block; font-size: 0.78rem; padding: 0.18rem 0.7rem; border-radius: 999px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+    .status-badge.pending_owner { background: #fefae0; color: #66490a; }
+    .status-badge.approved { background: #e7f3ec; color: #2c6f3f; }
+    .status-badge.rejected { background: #fdebea; color: #b54a2c; }
+    .status-badge.edit { background: #fef2e3; color: #9a4116; }
+    .status-badge.queued { background: #f5f3eb; color: var(--muted); }
+    .status-badge.accepted { background: #e3eff7; color: #1a4a72; }
+    .status-badge.ready { background: #e7f3ec; color: #2c6f3f; }
+
+    .timeline { list-style: none; padding-left: 0; margin: 0.6rem 0 0; }
+    .timeline li { padding: 0.5rem 0; border-top: 1px dashed var(--line); font-size: 0.92rem; }
+    .timeline li:first-child { border-top: 0; }
+    .muted { color: var(--muted); font-size: 0.9rem; }
+  </style>
+
+  <script is:inline define:vars={{ wrapperUrl: import.meta.env.PUBLIC_WRAPPER_URL ?? 'http://localhost:8000' }}>
+    const form = document.getElementById('status-form');
+    const result = document.getElementById('status-result');
+
+    function badge(status) {
+      const s = (status || 'pending_owner').toLowerCase();
+      return `<span class="status-badge ${s}">${s.replace('_', ' ')}</span>`;
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const orderId = document.getElementById('oid').value.trim();
+      if (!orderId) return;
+      result.innerHTML = '<p class="muted">Looking up…</p>';
+      try {
+        const r = await fetch(wrapperUrl + '/order/' + encodeURIComponent(orderId));
+        const data = await r.json();
+        let html = `<div class="status-card">
+          <h3>Order <code>${escapeHtml(orderId)}</code></h3>
+          <p>Status: ${badge(data.status)}</p>`;
+        if (data.history && data.history.length) {
+          html += '<ul class="timeline">';
+          for (const ev of data.history) {
+            html += `<li>${badge(ev.status)} &nbsp; ${escapeHtml(ev.message || '')}</li>`;
+          }
+          html += '</ul>';
+        }
+        if (data.sandbox && data.sandbox.order) {
+          const o = data.sandbox.order;
+          const t = data.sandbox.ticket;
+          html += `<hr style="border:0; border-top:1px solid var(--line); margin:1rem 0;" /><h3>Kitchen</h3>`;
+          html += `<p>Customer: <strong>${escapeHtml(o.customerName || '')}</strong></p>`;
+          html += `<p>POS status: ${badge(o.status)}</p>`;
+          if (t) {
+            html += `<p>Kitchen ticket: ${badge(t.status)} (${escapeHtml(t.estimatedPrepMinutes || '?')}-min prep)</p>`;
+            if (t.requestedPickupAt) html += `<p>Pickup requested: ${escapeHtml(t.requestedPickupAt)}</p>`;
+          } else {
+            html += `<p class="muted">No kitchen ticket yet.</p>`;
+          }
+        }
+        if (!data.history?.length && !data.sandbox) {
+          html += `<p class="muted">No activity recorded for this ID. If you just placed the order, give it a few seconds and try again.</p>`;
+        }
+        html += '</div>';
+        result.innerHTML = html;
+      } catch (err) {
+        result.innerHTML = `<p class="muted">Couldn't reach the system right now. <a href="${wrapperUrl}/health">Check service health</a> or try again in a minute.</p>`;
+      }
+    });
+
+    // Auto-fill from ?id= URL param
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      if (id) {
+        document.getElementById('oid').value = id;
+        form.dispatchEvent(new Event('submit'));
+      }
+    } catch {}
+  </script>
+</Layout>

@@ -1,0 +1,54 @@
+# Machine-readable HappyCake policies. Mirrored at /api/policies.json.
+# Source of truth for both the policies page (HTML) and any agent-side reasoning.
+
+lead_times:
+  slice: { minutes: 0,   note: "Walk-in. Subject to that day's bake batch." }
+  whole_cake: { minutes: 45,  note: "From order confirmation to pickup-ready." }
+  catering_box: { minutes: 90,  note: "20-piece office boxes." }
+  custom: { minutes: 180, note: "Plus a quick chat to confirm details. Always reviewed by a human." }
+
+pickup_delivery:
+  default: pickup
+  pickup_location: "HappyCake kitchen, Sugar Land, TX"
+  delivery: { available_on_request: true, quote: "by message", coverage: "Sugar Land + adjacent" }
+
+allergens:
+  shared_kitchen: [dairy, egg, wheat, tree_nuts]
+  policy: "We share what we know honestly. Cross-contact is possible. Serious allergies must be flagged before ordering — every flagged order is reviewed by a human."
+  certifications: []
+
+payment:
+  accepted: [card, cash]
+  online_payment: { status: "rolling out", current: "hold and settle at pickup" }
+
+cancellation_refund:
+  before_kitchen_accept: "Full refund/credit, no questions."
+  after_kitchen_accept: "Credit toward a future order; partial refund on a case-by-case basis."
+  no_show: "Order held until end of business day, then donated."
+
+complaints:
+  policy: "We answer, fix, and learn. We never delete negative reviews — we reply to them."
+  channel: "Reply in the chat widget on the site, or DM us on Instagram/WhatsApp."
+  resolution_window: "Same day if reported same day."
+
+custom_cakes:
+  framing: "Decoration is a small, optional service. We're best at our ready-made line."
+  flow:
+    - "Tell us the date, size, dietary needs, theme on /custom/"
+    - "Team reviews within the hour during open hours"
+    - "We confirm with a quote and pickup window, or honestly say we can't"
+    - "Custom always requires owner approval — we never auto-confirm a custom date"
+
+contact:
+  website: https://happycake.us
+  primary_chat: "On-site chat widget at https://happycake.us"
+  whatsapp: { status: "production_only", note: "Not active in this hackathon build; on-site chat is the live channel." }
+
+hours:
+  mon: "10:00–19:00"
+  tue: "10:00–19:00"
+  wed: "10:00–19:00"
+  thu: "10:00–19:00"
+  fri: "10:00–20:00"
+  sat: "09:00–20:00"
+  sun: "10:00–17:00"

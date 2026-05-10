@@ -7,7 +7,10 @@
 - **Catalog (machine-readable):** https://happycake.us/api/catalog.json
 - **Catalog (human):** https://happycake.us/catalog/
 - **Per-product pages:** https://happycake.us/product/{slug}/ — slugs available in catalog.json
-- **Policies / FAQ:** https://happycake.us/policies/
+- **Policies (machine-readable):** https://happycake.us/api/policies.json
+- **Policies (human):** https://happycake.us/policies/
+- **Custom cake intake:** https://happycake.us/custom/
+- **Order status lookup:** https://happycake.us/order-status/
 - **About:** https://happycake.us/about/
 
 ## Brand rules an agent must follow
