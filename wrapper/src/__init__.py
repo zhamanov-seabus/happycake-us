@@ -1,0 +1,1 @@
+"""HappyCake wrapper service."""
