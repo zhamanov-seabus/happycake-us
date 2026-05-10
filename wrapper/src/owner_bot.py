@@ -101,6 +101,36 @@ def _keyboard(order_id: str) -> InlineKeyboardMarkup:
 _app: Application | None = None
 
 
+def _is_owner(update: Update) -> bool:
+    """True iff the message originates from TELEGRAM_OWNER_CHAT_ID. The bot
+    answers /start and /help to anyone (so people who DM by accident get a
+    polite reply); every operator command and callback is owner-only."""
+    if not TELEGRAM_OWNER_CHAT_ID:
+        return False
+    chat = update.effective_chat
+    if not chat:
+        return False
+    return str(chat.id) == str(TELEGRAM_OWNER_CHAT_ID).strip()
+
+
+def _owner_only(handler):
+    """Wrap a command/callback so non-owners get a refusal instead of action."""
+    async def _wrapped(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+        if not _is_owner(update):
+            chat_id = update.effective_chat.id if update.effective_chat else "?"
+            evidence.log("auth_denied", "telegram", {"chat_id": chat_id, "command": getattr(update.message, "text", "(callback)")[:64]})
+            if update.callback_query:
+                await update.callback_query.answer("Owner-only action.", show_alert=True)
+            elif update.message:
+                await update.message.reply_text(
+                    "This bot is for the HappyCake owner only. If you reached us by mistake, "
+                    "say hello at https://happycake.us — we'll be glad to help on the site."
+                )
+            return
+        await handler(update, ctx)
+    return _wrapped
+
+
 def get_app() -> Application:
     global _app
     if _app is None:
@@ -109,16 +139,16 @@ def get_app() -> Application:
         _app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
         _app.add_handler(CommandHandler("start", _on_start))
         _app.add_handler(CommandHandler("help", _on_help))
-        _app.add_handler(CommandHandler("today", _on_today))
-        _app.add_handler(CommandHandler("menu", _on_menu))
-        _app.add_handler(CommandHandler("report", _on_report))
-        _app.add_handler(CommandHandler("post", _on_post))
-        _app.add_handler(CommandHandler("purchase", _on_purchase))
-        _app.add_handler(CommandHandler("restock", _on_restock))
-        _app.add_handler(CallbackQueryHandler(_on_callback, pattern=r"^order:"))
-        _app.add_handler(CallbackQueryHandler(_on_post_callback, pattern=r"^post:"))
+        _app.add_handler(CommandHandler("today", _owner_only(_on_today)))
+        _app.add_handler(CommandHandler("menu", _owner_only(_on_menu)))
+        _app.add_handler(CommandHandler("report", _owner_only(_on_report)))
+        _app.add_handler(CommandHandler("post", _owner_only(_on_post)))
+        _app.add_handler(CommandHandler("purchase", _owner_only(_on_purchase)))
+        _app.add_handler(CommandHandler("restock", _owner_only(_on_restock)))
+        _app.add_handler(CallbackQueryHandler(_owner_only(_on_callback), pattern=r"^order:"))
+        _app.add_handler(CallbackQueryHandler(_owner_only(_on_post_callback), pattern=r"^post:"))
         # Free-form text from the owner is treated as a follow-up after Edit.
-        _app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, _on_text))
+        _app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, _owner_only(_on_text)))
     return _app
 
 

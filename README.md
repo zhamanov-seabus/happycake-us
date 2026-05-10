@@ -89,7 +89,16 @@ For local-only development, the demo script bypasses webhooks by POSTing payload
 
 ## Running the demo
 
-**On a fresh clone, seed the sandbox first** so every rubric line has evidence to score against (~60s):
+**Step 0 — confirm the stack is wired.** `./scripts/healthcheck.sh` checks the .env, every CLI tool, the wrapper, the sandbox MCP, the Telegram bot, **and the public tunnel.** Cloudflare quick tunnels rotate URLs on every restart, so if the tunnel went stale between sessions this script tells you exactly what to fix:
+
+```bash
+./scripts/healthcheck.sh
+# Exit 0 = all green; 1 = fatal (.env / tooling); 2 = warnings (probably fixable)
+```
+
+If the tunnel section fails: restart the tunnel (`cloudflared tunnel --url http://localhost:8000`), paste the new URL into `.env` as `PUBLIC_TUNNEL_URL=`, restart the wrapper, then re-run `./scripts/register-webhooks.sh`.
+
+**Step 1 — seed the sandbox** so every rubric line has evidence to score against (~60s):
 
 ```bash
 ./scripts/seed.sh
