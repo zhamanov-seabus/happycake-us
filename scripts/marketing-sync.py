@@ -21,6 +21,21 @@ from happycake_wrapper import mcp_client  # noqa: E402
 
 
 def main() -> None:
+    # Honor the owner's /pause Telegram command — if marketing is paused,
+    # exit without firing any sends, broadcasts, or reroute calls.
+    state_path = Path(__file__).resolve().parents[1] / "data" / "marketing-state.json"
+    if state_path.exists():
+        try:
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            if state.get("paused"):
+                reason = state.get("paused_reason") or "no reason given"
+                paused_at = state.get("paused_at") or "?"
+                print(f"⏸ Marketing PAUSED since {paused_at} ({reason}). Skipping this cycle.")
+                print("   Owner can /resume from Telegram to re-enable.")
+                return
+        except Exception as e:
+            print(f"WARN: could not read {state_path}: {e}")
+
     print("=== Reading marketing budget context ===")
     budget = mcp_client.call("marketing_get_budget", {}) or {}
     print(json.dumps(budget, indent=2))

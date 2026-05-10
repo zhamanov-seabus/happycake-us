@@ -38,6 +38,7 @@ evidence/log.jsonl
 # Local mutable state (per-instance, never committed)
 data/pending.json
 data/customer_memory.jsonl
+data/marketing-state.json
 
 # Tunnel state
 .ngrok/
