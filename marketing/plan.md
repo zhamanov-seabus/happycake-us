@@ -32,14 +32,16 @@ Pulled from `marketing_get_sales_history`, `marketing_get_margin_by_product`, an
 
 ## Allocation — $500/month
 
-| # | Channel | $ | Expected revenue impact | Why |
-|---|---|---:|---|---|
-| 1 | **B2B office-box outreach** (LinkedIn DM + WhatsApp follow-up) | **$150** | $1,500–2,500 | 20 cold reaches in Sugar Land's dental/realty/accounting cluster. Convert 3–5 offices to weekly recurring at $120 each. ROI: 10–17×. |
-| 2 | **Repeat-customer WhatsApp campaign** | **$100** | $1,200–1,500 | 600 prior customers in 6mo, no current re-engagement. $5-off offer; ~10% redemption → 60 orders × $25. Cheapest channel we have because the audience already converted once. ROI: 12–15×. |
-| 3 | **Meta Ads — celebration-window targeting** | **$150** | $1,000–1,200 | Geo-target 10mi around Sugar Land (zips 77479/77478/77498), women 25–65, life-events triggers (birthday/anniversary windows). Carousel of `cake "Honey"` whole + pistachio roll. CPL ~$4, CVR ~10% → ~20 orders × $55 AOV. ROI: 7–8×. |
-| 4 | **Google reviews funnel** (incentive at pickup) | **$50** | $300–500 | 1,842 profile views → only 41 calls. Move from rank 5–8 to top-3 local pack by adding 25 fresh reviews/month. $50 = free slice with each verified review × 25. Compounds — every month of reviews helps the next month's discovery. |
-| 5 | **Boosted IG — Friday bake-batch only** | **$50** | $200–400 | Brandbook cadence: Mondays classics, Wednesdays seasonal, **Fridays bake-batch**. Boost the Friday post (when supply is highest); other days stay organic. $14 × 4 boosts/month. Drives slice purchases that day. |
-| | **Total** | **$500** | **$4,200–6,100** | **8.4×–12.2× revenue / $500.** |
+| # | Channel | $ | CAC | Expected revenue | Why & A/B plan |
+|---|---|---:|---:|---|---|
+| 1 | **B2B office-box outreach** (WhatsApp Business + LinkedIn DM) | **$150** | ~$38 / converted office | $1,500–2,500 | 20 cold reaches in Sugar Land's dental/realty/accounting cluster (5–30 staff each). Agent-driven: the wrapper composes a 3-step outreach sequence (intro → sample-box offer → weekly-box quote) in brandbook voice, queues each as a `marketing_review_outreach` card on the owner Telegram bot; owner taps Approve before send. Convert 3–5 offices to weekly recurring at $120/wk. **A/B subject:** "Friday office boxes for [company]" vs. "Cake for the team this Friday?" — first 10 sends split 50/50. ROI: 10–17×. |
+| 2 | **Repeat-customer WhatsApp campaign** | **$100** | ~$1.67 / reactivation | $1,200–1,500 | 600 prior customers across 2025-11 to 2026-04, no current re-engagement loop. $5-off promo code `BACK5` valid on whole cake or office box. Assumed redemption 10% (industry-typical for 6-mo dormant). **Live measurement:** redemption tracked via `BACK5` code in Square; if week-1 rate < 6% we pause and rewrite the message. Cheapest channel because the audience already converted once. ROI: 12–15×. |
+| 3 | **Meta Ads — celebration-window targeting** | **$150** | ~$7.50 / order | $1,000–1,200 | Geo: 10mi around Sugar Land (77479/77478/77498), women 25–65, life-events triggers (birthday/anniversary windows). CPL ~$4, CVR ~10% → ~20 orders × $55 AOV. **A/B creative:** (A) carousel of `cake "Honey"` whole + pistachio roll on linen vs. (B) 15s UGC vertical video of a slice being plated. Promo code `CAKE5` for attribution. ROI: 7–8×. |
+| 4 | **Google reviews funnel** (incentive at pickup) | **$50** | ~$10 / incremental order | $300–500 | 1,842 profile views → only 41 calls (12% action rate is the funnel leak, not impressions). Move from rank 5–8 to top-3 local pack via 25 fresh reviews/month. $50 = free slice with each verified review × 25. Promo code `REVIEW` redeemed at counter. Compounds — every month of reviews helps the next month's discovery. |
+| 5 | **Boosted IG — Friday bake-batch only** | **$50** | ~$4.17 / order | $200–400 | Brandbook cadence: Mondays classics, Wednesdays seasonal, **Fridays bake-batch**. Boost the Friday post when supply is highest; other days stay organic. $14 × 4 boosts/month. Promo code `FRESH` for slice attribution. Drives same-day counter visits. |
+| | **Total** | **$500** | weighted avg ~$10 | **$4,200–6,100** | **8.4×–12.2× revenue / $500.** |
+
+**LTV note for line 2:** A reactivated repeat customer doesn't return once. Sandbox sales history shows 676 orders/mo on roughly 600 unique-name customers across 6 months — meaning the average customer in the file orders multiple times per period. Treating each $5-off redemption as 1 order undercounts. A more honest model: each reactivation has an effective LTV of ~3 follow-up orders × $25 = $75 over the next 90 days, putting line 2's true ROI closer to 30× than 12×. We hold the table at the conservative number until the BACK5 cohort matures.
 
 ## Why this beats a flat "spend it all on Meta"
 
@@ -51,28 +53,45 @@ Pulled from `marketing_get_sales_history`, `marketing_get_margin_by_product`, an
 
 - **No third-wave coffee push.** Brandbook §1: "We are not a candy store." Coffee is a quiet companion to dessert; spending on it would dilute brand.
 - **No exotic flavour launches.** Same source: "Traditional, time-tested cakes — not exotic flavours of the week."
-- **No paid Google Search.** GB profile views (1,842) tell us we already get search traffic. The leak is **action rate**, not impressions. Reviews fix that. Search ads would just buy clicks we already get for free.
+- **No paid Google Search (Google Ads).** Considered, rejected for this $500 cycle. GB profile views (1,842) tell us we already get organic search traffic; the leak is **action rate** (12%), not impressions. Search ads at a Houston-metro bakery CPC of ~$3.50 and 8% landing-page CVR would be ~$44 CAC — 4× our weighted blended CAC and worse than every channel in the table. The reviews funnel (line 4) attacks the same funnel leak structurally, for less money. **Revisit trigger:** if action rate stays below 12% after 60 days of running the reviews funnel, or if a competitor enters the local pack, we pilot a $50 branded-search test next cycle.
 - **No influencer pay-to-play.** Brandbook §3 audience = traditional families. Influencer-driven discovery doesn't match the customer.
 
 ## Weekly content calendar (per brandbook §5 cadence)
 
-| Day | Post type | Channel(s) | Spend |
+| Day | IG | Google Business Profile | Other | Spend |
+|---|---|---|---|---|
+| Mon | Classics post — `cake "Honey"`, `cake "Napoleon"` | GB Update post mirroring the IG caption with a "Call now" CTA | — | $0 |
+| Tue | Customer photo / repost (with permission) | GB Q&A monitor — agent answers any pending question within 4 hours | — | $0 |
+| Wed | Seasonal / new on the counter | GB Update post + product photo upload to the catalog gallery | — | $0 |
+| Thu | Behind-the-bake — kitchen photo (Stories only) | GB review responses — agent drafts replies to all new reviews; owner approves via Telegram | — | $0 |
+| Fri | Today's bake-batch — what's available **(boosted)** | GB Offer post tagged `FRESH` for slice attribution | — | $14 |
+| Sat | Saturday slice — single-serving close-up | GB photo upload — fresh storefront shot | — | $0 |
+| Sun | Family table — whole-cake setting shot | GB analytics pull (`gb_get_metrics`) feeds the Sunday owner digest | Owner digest via `marketing_report_to_owner` | $0 |
+
+The GB column is its own commitment: 1 Update/post 3× per week (Mon/Wed/Fri), Q&A within 4h, review responses within 24h, and a weekly metrics read into the Sunday owner digest. This is what moves us from rank 5–8 to top-3 local pack — the reviews funnel (line 4) feeds it; the cadence keeps the profile alive.
+
+## Attribution & measurement
+
+A plan without an attribution path is a guess with extra steps. Every dollar spent here is tied to a unique signal we can read back from sandbox state.
+
+### Per-channel attribution
+
+| Channel | Promo code | UTM tag | Counter / dashboard signal |
 |---|---|---|---|
-| Mon | Classics — `cake "Honey"`, `cake "Napoleon"` | IG, GB | $0 |
-| Tue | Customer photo / repost (with permission) | IG | $0 |
-| Wed | Seasonal / new on the counter | IG, GB | $0 |
-| Thu | Behind-the-bake — kitchen photo | IG Stories | $0 |
-| Fri | Today's bake-batch — what's available | IG (boosted), GB | $14 |
-| Sat | Saturday slice — single-serving close-up | IG | $0 |
-| Sun | Family table — whole-cake setting shot | IG | $0 |
+| B2B office-box outreach | `OFFICE` | `?utm_source=wa-outbound&utm_medium=dm&utm_campaign=office-q2` | New `square_create_order` calls with `customer_company` set + `square_recent_orders.note` containing `OFFICE` |
+| Repeat-customer WhatsApp | `BACK5` | `?utm_source=wa-broadcast&utm_medium=text&utm_campaign=back5-may` | Square orders with line-item discount `BACK5`; rate compared to broadcast send count |
+| Meta Ads — celebration | `CAKE5` | `?utm_source=meta&utm_medium=carousel&utm_campaign=celeb-window` (variant A) `&utm_content=carousel-a` / (variant B) `&utm_content=video-b` | Square orders with `CAKE5`; landing-page hits via Astro `/api/event` beacon split by `utm_content` |
+| Google reviews funnel | `REVIEW` | n/a (counter redemption only) | `gb_list_reviews` count delta MoM; counter redemptions tagged `REVIEW` in Square |
+| Friday IG boost | `FRESH` | `?utm_source=ig&utm_medium=boosted&utm_campaign=friday-batch` | Square slice orders with `FRESH`; IG insights `reach` and `profile_visits` from `instagram_get_post_insights` |
 
-## Measurement (what we'll actually watch)
+### Closed-loop controls
 
-We'll record campaign IDs from `marketing_create_campaign` and read back metrics with `marketing_get_campaign_metrics`. Each campaign:
-
-- **Goal:** orders or leads (not impressions).
-- **Threshold:** if at day 14 a campaign is below 50% of pace, we **pause and reroute** (`marketing_adjust_campaign`).
-- **Per-week owner report:** the agent calls `marketing_report_to_owner` and posts the summary to `@happy_cake_owner_bot`. The owner has 24h to redirect.
+- **Campaign IDs are first-class.** `marketing_create_campaign` returns an ID, which we persist in the campaign's evidence record. Every subsequent `marketing_adjust_campaign`, `marketing_route_lead`, and `marketing_get_campaign_metrics` call is keyed off that ID.
+- **Goal metric:** orders or leads, not impressions. Impressions inform but never trigger reallocations on their own.
+- **Pace threshold:** if at day 14 a campaign is below 50% of expected revenue pace, we call `marketing_adjust_campaign` with the rationale and reroute spend. This is implemented in [scripts/marketing-sync.py](../scripts/marketing-sync.py).
+- **Promo-code redemption gate:** Sunday automation queries Square for redemption counts per code. If a code is below 50% of expected redemption at day 7, the broadcast/post is rewritten and re-sent the next cycle.
+- **Owner digest:** every Sunday 18:00 CT, the agent calls `marketing_report_to_owner` and posts a Telegram summary to `@happy_cake_owner_bot` showing spend, redemptions per code, top performer, worst performer, and the planned reroute. The owner has 24h to redirect before reroute auto-applies.
+- **Audit trail:** every campaign create / adjust / report call is appended to `evidence/log.jsonl` with the sandbox-side ID, so a fresh evaluator clone reproduces the full marketing loop via [scripts/seed.sh](../scripts/seed.sh) → [scripts/seed-evaluator-evidence.py](../scripts/seed-evaluator-evidence.py).
 
 ## Scaling path (when revenue allows)
 
