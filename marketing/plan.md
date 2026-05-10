@@ -34,7 +34,7 @@ Pulled from `marketing_get_sales_history`, `marketing_get_margin_by_product`, an
 
 | # | Channel | $ | CAC | Expected revenue | Why & A/B plan |
 |---|---|---:|---:|---|---|
-| 1 | **B2B office-box outreach** (WhatsApp Business + LinkedIn DM) | **$150** | ~$38 / converted office | $1,500–2,500 | 20 cold reaches in Sugar Land's dental/realty/accounting cluster (5–30 staff each). Agent-driven: the wrapper composes a 3-step outreach sequence (intro → sample-box offer → weekly-box quote) in brandbook voice, queues each as a `marketing_review_outreach` card on the owner Telegram bot; owner taps Approve before send. Convert 3–5 offices to weekly recurring at $120/wk. **A/B subject:** "Friday office boxes for [company]" vs. "Cake for the team this Friday?" — first 10 sends split 50/50. ROI: 10–17×. |
+| 1 | **B2B office-box outreach** (WhatsApp Business + LinkedIn DM) | **$150** | ~$38 / converted office | $1,500–2,500 | 20 cold reaches in Sugar Land's dental/realty/accounting cluster (5–30 staff each). Agent-driven: the wrapper composes a 3-step outreach sequence (intro → sample-box offer → weekly-box quote) in brandbook voice, queues each as an owner-approval card on `@happy_cake_owner_bot` via the wrapper's existing approval flow ([wrapper/src/marketing.py](../wrapper/src/marketing.py) `queue_for_owner_approval`); owner taps Approve before `whatsapp_send` fires. Convert 3–5 offices to weekly recurring at $120/wk. **A/B subject:** "Friday office boxes for [company]" vs. "Cake for the team this Friday?" — first 10 sends split 50/50. ROI: 10–17×. |
 | 2 | **Repeat-customer WhatsApp campaign** | **$100** | ~$1.67 / reactivation | $1,200–1,500 | 600 prior customers across 2025-11 to 2026-04, no current re-engagement loop. $5-off promo code `BACK5` valid on whole cake or office box. Assumed redemption 10% (industry-typical for 6-mo dormant). **Live measurement:** redemption tracked via `BACK5` code in Square; if week-1 rate < 6% we pause and rewrite the message. Cheapest channel because the audience already converted once. ROI: 12–15×. |
 | 3 | **Meta Ads — celebration-window targeting** | **$150** | ~$7.50 / order | $1,000–1,200 | Geo: 10mi around Sugar Land (77479/77478/77498), women 25–65, life-events triggers (birthday/anniversary windows). CPL ~$4, CVR ~10% → ~20 orders × $55 AOV. **A/B creative:** (A) carousel of `cake "Honey"` whole + pistachio roll on linen vs. (B) 15s UGC vertical video of a slice being plated. Promo code `CAKE5` for attribution. ROI: 7–8×. |
 | 4 | **Google reviews funnel** (incentive at pickup) | **$50** | ~$10 / incremental order | $300–500 | 1,842 profile views → only 41 calls (12% action rate is the funnel leak, not impressions). Move from rank 5–8 to top-3 local pack via 25 fresh reviews/month. $50 = free slice with each verified review × 25. Promo code `REVIEW` redeemed at counter. Compounds — every month of reviews helps the next month's discovery. |
@@ -76,13 +76,15 @@ A plan without an attribution path is a guess with extra steps. Every dollar spe
 
 ### Per-channel attribution
 
+Every promo code is written into the order's `items[].note` field at `square_create_order` time, so it's readable back from `square_recent_orders` and `square_recent_sales_csv` without depending on Square discount features the sandbox doesn't simulate.
+
 | Channel | Promo code | UTM tag | Counter / dashboard signal |
 |---|---|---|---|
-| B2B office-box outreach | `OFFICE` | `?utm_source=wa-outbound&utm_medium=dm&utm_campaign=office-q2` | New `square_create_order` calls with `customer_company` set + `square_recent_orders.note` containing `OFFICE` |
-| Repeat-customer WhatsApp | `BACK5` | `?utm_source=wa-broadcast&utm_medium=text&utm_campaign=back5-may` | Square orders with line-item discount `BACK5`; rate compared to broadcast send count |
-| Meta Ads — celebration | `CAKE5` | `?utm_source=meta&utm_medium=carousel&utm_campaign=celeb-window` (variant A) `&utm_content=carousel-a` / (variant B) `&utm_content=video-b` | Square orders with `CAKE5`; landing-page hits via Astro `/api/event` beacon split by `utm_content` |
-| Google reviews funnel | `REVIEW` | n/a (counter redemption only) | `gb_list_reviews` count delta MoM; counter redemptions tagged `REVIEW` in Square |
-| Friday IG boost | `FRESH` | `?utm_source=ig&utm_medium=boosted&utm_campaign=friday-batch` | Square slice orders with `FRESH`; IG insights `reach` and `profile_visits` from `instagram_get_post_insights` |
+| B2B office-box outreach | `OFFICE` | `?utm_source=wa-outbound&utm_medium=dm&utm_campaign=office-q2` | `square_recent_orders` items with `note` containing `OFFICE`; cross-checked against the outreach card history in `evidence/log.jsonl` |
+| Repeat-customer WhatsApp | `BACK5` | `?utm_source=wa-broadcast&utm_medium=text&utm_campaign=back5-may` | `square_recent_orders` items with `note` containing `BACK5`; redemption rate = matched orders / broadcast send count |
+| Meta Ads — celebration | `CAKE5` | `?utm_source=meta&utm_medium=carousel&utm_campaign=celeb-window` (variant A) `&utm_content=carousel-a` / (variant B) `&utm_content=video-b` | `square_recent_orders` items with `note` containing `CAKE5`; landing-page hits split by `utm_content` via the Astro `/api/event` beacon |
+| Google reviews funnel | `REVIEW` | n/a (counter redemption only) | `gb_list_reviews` count delta MoM via `gb_get_metrics`; counter redemptions in `square_recent_orders` items with `note` containing `REVIEW` |
+| Friday IG boost | `FRESH` | `?utm_source=ig&utm_medium=boosted&utm_campaign=friday-batch` | `square_recent_orders` items with `note` containing `FRESH`; reach proxied by Friday counter-order delta vs. the prior 4 Fridays' baseline |
 
 ### Closed-loop controls
 
