@@ -2,8 +2,11 @@
 import Layout from '../layouts/Layout.astro';
 import { getCatalog, priceLabel } from '../lib/catalog';
 import { withBase } from '../lib/url';
+import { getInventory } from '../lib/sandbox';
 
 const catalog = getCatalog();
+const inventory = await getInventory();
+const inventoryByVar = new Map(inventory.map(i => [i.variationId, i]));
 ---
 <Layout title="Catalog">
   <section class="container">
@@ -25,6 +28,11 @@ const catalog = getCatalog();
                 </a>
                 <div class="body">
                   <h3 set:html={p.display_name} />
+                  {(() => {
+                    const inv = inventoryByVar.get(p.variation_id);
+                    if (!inv) return null;
+                    return <span class={`stock-pill ${inv.inStock ? 'in' : 'out'}`}>{inv.inStock ? 'In stock today' : 'Sold out today'}</span>;
+                  })()}
                   <p>{p.description}</p>
                   <div class="tags">
                     {p.tags.map(t => <span class="tag">{t}</span>)}

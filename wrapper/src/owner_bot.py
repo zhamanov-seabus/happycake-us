@@ -110,6 +110,7 @@ def get_app() -> Application:
         _app.add_handler(CommandHandler("start", _on_start))
         _app.add_handler(CommandHandler("today", _on_today))
         _app.add_handler(CallbackQueryHandler(_on_callback, pattern=r"^order:"))
+        _app.add_handler(CallbackQueryHandler(_on_post_callback, pattern=r"^post:"))
         # Free-form text from the owner is treated as a follow-up after Edit.
         _app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, _on_text))
     return _app
@@ -195,6 +196,38 @@ async def _on_callback(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
         except Exception as e:
             log.exception("decision handler raised: %s", e)
             evidence.log("error", "system", {"where": "owner_decision_handler", "error": str(e)})
+
+
+_post_decision_handlers: list[Callable[[str, str], Awaitable[None]]] = []
+
+
+def register_post_decision_handler(fn: Callable[[str, str], Awaitable[None]]) -> None:
+    """Register an async callback fired when owner clicks ✅/❌ on a post draft."""
+    _post_decision_handlers.append(fn)
+
+
+async def _on_post_callback(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    q = update.callback_query
+    await q.answer()
+    parts = (q.data or "").split(":", 2)
+    if len(parts) != 3:
+        return
+    _, verb, scheduled_id = parts
+    icon = {"approve": "✅", "reject": "❌"}.get(verb, "·")
+    try:
+        cur = q.message.caption if q.message and q.message.caption else (q.message.text if q.message else "")
+        if q.message and q.message.caption is not None:
+            await q.edit_message_caption(caption=f"{cur}\n\n{icon} {verb.capitalize()}ed", parse_mode="HTML")
+        elif q.message and q.message.text is not None:
+            await q.edit_message_text(f"{cur}\n\n{icon} {verb.capitalize()}ed")
+    except Exception as e:
+        log.warning("edit post card failed: %s", e)
+    for fn in _post_decision_handlers:
+        try:
+            await fn(scheduled_id, verb)
+        except Exception as e:
+            log.exception("post decision handler raised: %s", e)
+            evidence.log("error", "system", {"where": "post_decision_handler", "error": str(e)})
 
 
 async def _on_text(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:

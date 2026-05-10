@@ -30,6 +30,8 @@ jobs:
         working-directory: web
         env:
           PUBLIC_WRAPPER_URL: ${{ vars.PUBLIC_WRAPPER_URL }}
+          SBC_TEAM_TOKEN: ${{ secrets.SBC_TEAM_TOKEN }}
+          SBC_MCP_URL: ${{ vars.SBC_MCP_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web/dist

@@ -2,12 +2,17 @@
 import Layout from '../layouts/Layout.astro';
 import { getCatalog, priceLabel } from '../lib/catalog';
 import { withBase } from '../lib/url';
+import { getCapacity, getInventory } from '../lib/sandbox';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const catalog = getCatalog();
 const featured = catalog.products.filter(p => p.tags.includes('classic') || p.tags.includes('signature'));
+
+// Live operational state from sandbox MCP (fetched at build time).
+const [capacity, inventory] = await Promise.all([getCapacity(), getInventory()]);
+const inventoryByVar = new Map(inventory.map(i => [i.variationId, i]));
 
 // Load reviews if scripts/pull-reviews.py has been run.
 const reviewsPath = resolve(dirname(fileURLToPath(import.meta.url)), '../../../data/reviews.json');
@@ -31,6 +36,13 @@ const aggregateRating = reviewsData && reviewsData.totalCount > 0 ? {
     <div class="copy">
       <h1>It's just like homemade.</h1>
       <p class="lead">HappyCake makes the kind of cakes you remember. Tender layers, real cream, baked in our Sugar Land kitchen and ready by closing time.</p>
+      {capacity && (
+        <p class="capacity-badge" title="Live from the kitchen">
+          {capacity.remainingCapacityMinutes >= 60 ? '🟢' : capacity.remainingCapacityMinutes > 0 ? '🟡' : '🔴'}
+          &nbsp;Today: <strong>{capacity.remainingCapacityMinutes}</strong> min of capacity left ·
+          {capacity.queuedTickets} queued · default lead {capacity.defaultLeadTimeMinutes} min
+        </p>
+      )}
       <p>
         <a href={withBase('/catalog/')} class="cta-link" style="background:var(--happy-blue);color:white;padding:0.7rem 1.4rem;border-radius:8px;text-decoration:none;font-weight:500;display:inline-block;">See today's cakes</a>
       </p>
@@ -41,22 +53,30 @@ const aggregateRating = reviewsData && reviewsData.totalCount > 0 ? {
   <section class="container">
     <h2>Today's classics</h2>
     <div class="grid">
-      {featured.map(p => (
-        <article class="card">
-          <a href={withBase(`/product/${p.slug}/`)}>
-            <img src={withBase(p.photo)} alt={p.name} loading="lazy" />
-          </a>
-          <div class="body">
-            <h3 set:html={p.display_name} />
-            <p>{p.description}</p>
-            <div class="meta">
-              <span class="price">{priceLabel(p)}</span>
-              <span class="weight">{p.weight}</span>
+      {featured.map(p => {
+        const inv = inventoryByVar.get(p.variation_id);
+        return (
+          <article class="card">
+            <a href={withBase(`/product/${p.slug}/`)}>
+              <img src={withBase(p.photo)} alt={p.name} loading="lazy" />
+            </a>
+            <div class="body">
+              <h3 set:html={p.display_name} />
+              {inv && (
+                <span class={`stock-pill ${inv.inStock ? 'in' : 'out'}`}>
+                  {inv.inStock ? 'In stock today' : 'Sold out today'}
+                </span>
+              )}
+              <p>{p.description}</p>
+              <div class="meta">
+                <span class="price">{priceLabel(p)}</span>
+                <span class="weight">{p.weight}</span>
+              </div>
+              <a href={withBase(`/product/${p.slug}/`)} class="cta">View</a>
             </div>
-            <a href={withBase(`/product/${p.slug}/`)} class="cta">View</a>
-          </div>
-        </article>
-      ))}
+          </article>
+        );
+      })}
     </div>
   </section>
 

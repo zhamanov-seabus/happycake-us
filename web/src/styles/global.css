@@ -121,6 +121,24 @@ footer.site .hours { font-size: 0.85rem; line-height: 1.6; max-width: 400px; }
 }
 .card a.cta:hover { background: var(--ink); }
 
+/* Inventory pill */
+.stock-pill { display: inline-block; font-size: 0.74rem; padding: 0.18rem 0.6rem; border-radius: 999px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.4rem; }
+.stock-pill.in { background: #e7f3ec; color: #2c6f3f; }
+.stock-pill.out { background: #fdebea; color: #b54a2c; }
+
+/* Capacity badge */
+.capacity-badge {
+  display: inline-block;
+  font-size: 0.86rem;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  color: var(--ink);
+  margin: 0.4rem 0 1rem;
+}
+.capacity-badge strong { color: var(--happy-blue); }
+
 /* Pill tags */
 .tags { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0.5rem 0; }
 .tag {

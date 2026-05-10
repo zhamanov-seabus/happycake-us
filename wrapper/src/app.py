@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from . import agent, evidence, order_events, owner_bot
+from . import agent, evidence, marketing, order_events, owner_bot
 from .config import PUBLIC_TUNNEL_URL, TELEGRAM_BOT_TOKEN
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -19,9 +19,10 @@ log = logging.getLogger("happycake.app")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Wire the owner-decision + edit-message callbacks before polling starts
+    # Wire the owner-decision + edit-message + post-approval callbacks before polling starts
     owner_bot.register_decision_handler(agent.on_owner_decision)
     owner_bot.register_edit_message_handler(agent.on_owner_edit_message)
+    owner_bot.register_post_decision_handler(marketing.on_owner_post_decision)
     polling_task = None
     if TELEGRAM_BOT_TOKEN:
         try:
@@ -54,6 +55,24 @@ app.add_middleware(
 @app.get("/health")
 def health() -> dict:
     return {"ok": True, "tunnel": PUBLIC_TUNNEL_URL or None}
+
+
+# ---------- Marketing creative pipeline ----------
+
+class DraftIn(BaseModel):
+    theme: str
+    audience: str | None = None
+
+
+@app.post("/marketing/draft")
+async def marketing_draft(payload: DraftIn) -> dict:
+    """Generate a post draft, schedule it (un-published), and send the
+    owner an approval card on Telegram. Owner taps Approve → published."""
+    out = await marketing.queue_for_owner_approval(
+        theme=payload.theme,
+        audience=payload.audience or "",
+    )
+    return {"ok": True, **out}
 
 
 # ---------- Lead capture ----------
@@ -184,6 +203,34 @@ async def order_status_stream(order_id: str) -> StreamingResponse:
 #   {from, fromName, message, threadId, ...}
 # This extractor handles both so the channel handlers stay simple.
 
+def _extract_comment(payload: dict) -> dict:
+    """Pull an Instagram comment event from a Meta-style envelope.
+
+    Shape: entry[*].changes[*] where field == 'comments' and value carries
+    {id, from:{id,username}, media:{id}, text}. Returns {} if not a comment.
+    """
+    try:
+        for entry in payload.get("entry", []) or []:
+            for change in entry.get("changes", []) or []:
+                if change.get("field") != "comments":
+                    continue
+                v = change.get("value") or {}
+                text = v.get("text")
+                if not text:
+                    continue
+                frm = v.get("from") or {}
+                return {
+                    "text": text,
+                    "comment_id": v.get("id"),
+                    "media_id": (v.get("media") or {}).get("id"),
+                    "from_user_id": frm.get("id"),
+                    "fromName": frm.get("username") or frm.get("id") or "ig_user",
+                }
+    except (TypeError, AttributeError):
+        pass
+    return {}
+
+
 def _extract_message(channel: str, payload: dict) -> dict:
     """Return {text, from, fromName, threadId} or {} if no usable message."""
     # Flat shape (our scripts) takes precedence if present
@@ -286,13 +333,47 @@ async def _process_inbound(channel: str, extracted: dict) -> None:
 @app.post("/webhook/instagram")
 async def webhook_instagram(payload: dict) -> dict:
     evidence.log("webhook_in", "instagram", {"payload": payload})
+    # Comments and DMs both arrive on this endpoint. Comments need a different
+    # reply tool (instagram_reply_to_comment), so split here.
+    comment = _extract_comment(payload)
+    if comment.get("text"):
+        asyncio.create_task(_process_comment(comment))
+        return {"ok": True, "accepted": True, "kind": "comment"}
     extracted = _extract_message("instagram", payload)
     if not extracted.get("text"):
         return {"ok": True, "skipped": "no message", "shape_seen": list(payload.keys())[:6]}
-    # Ack immediately; process in the background so the sandbox forwarder
-    # (which has a short HTTP timeout) doesn't see a stalled connection.
     asyncio.create_task(_process_inbound("instagram", extracted))
-    return {"ok": True, "accepted": True}
+    return {"ok": True, "accepted": True, "kind": "dm"}
+
+
+async def _process_comment(comment: dict) -> None:
+    """Run the agent for an IG comment and reply via instagram_reply_to_comment.
+
+    Comments are public; we don't gate them on owner approval (a public no-op
+    silence looks worse than a public reply). Treats the comment text as the
+    customer message; the agent decides intent. If order_intent, also fires
+    an owner card so the team knows to nudge the commenter into a DM.
+    """
+    text = comment["text"]
+    decision = await agent.handle_customer_message(
+        channel="instagram",
+        customer_name=comment.get("fromName") or "ig_user",
+        customer_handle=comment.get("from_user_id") or "ig_user",
+        text=text,
+        thread_id=comment.get("comment_id"),  # carry comment id for reply
+    )
+    reply_text = decision.get("reply_text") or "Thanks — DM us and we'll set this up."
+    cid = comment.get("comment_id")
+    if cid:
+        from . import mcp_client
+        try:
+            mcp_client.call("instagram_reply_to_comment", {
+                "commentId": cid,
+                "message": reply_text,
+            })
+            evidence.log("customer_reply", "instagram", {"kind": "comment_reply", "comment_id": cid, "text": reply_text[:300]})
+        except Exception as e:
+            evidence.log("error", "system", {"where": "ig_comment_reply", "error": str(e)})
 
 
 # ---------- WhatsApp webhook ----------
