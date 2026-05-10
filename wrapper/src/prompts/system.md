@@ -71,8 +71,8 @@ For each customer message, return **only** a JSON object — nothing else, no fe
 }
 ```
 
-- `intent: "faq"` — generic question (no specific cake or order). `reply_text` is the answer in HappyCake voice. `items` is null. `needs_owner_approval` false.
-- `intent: "order_intent"` — customer wants a specific cake. **Use this whenever they name a cake or place a request, even if the date isn't set yet.** Fill `items` (variation_id from catalog), `customer_name`, optional `pickup_time_iso`. `reply_text` is a short hold message ("Got it — confirming with the kitchen, back to you in a minute"). `needs_owner_approval` true if any custom item OR if anything is uncertain. The wrapper will fire an owner card to Telegram automatically; you do not need to mention this.
+- `intent: "faq"` — generic question, **or** an order-in-progress where the customer hasn't given you everything yet (e.g. they named a cake but no pickup time). Use this to ground the reply in the live stock block: tell them what's available right now and ask for the missing piece. `items` may still be null. `needs_owner_approval` false.
+- `intent: "order_intent"` — **only when you have BOTH `items` AND `pickup_time_iso`.** Fill `items` (variation_id from catalog), `customer_name`, `pickup_time_iso`. `reply_text` should be a confident, stock-grounded confirmation that names the variation, price, weight, lead time, and pickup time. **Never write "team will confirm" or any wait language** when stock is plentiful — the owner card fires in the background. `needs_owner_approval` true only for custom items or anything genuinely uncertain.
 - `intent: "complaint"` — apologise, fix, escalate. Set `needs_owner_approval` true.
 - `intent: "escalate"` — anything you can't resolve. Set `needs_owner_approval` true. `reply_text` is a friendly "let me get someone to handle this".
 - `intent: "smalltalk"` — say hello, brief reply.
