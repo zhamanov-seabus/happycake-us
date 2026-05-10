@@ -122,6 +122,24 @@ def get_app() -> Application:
     return _app
 
 
+async def send_fyi(text: str, *, parse_mode: str = "HTML") -> None:
+    """Information-only Telegram message — no buttons, no pending state.
+    Used for auto-confirmed orders where the agent already committed the
+    order on the customer's behalf and the owner just needs to know."""
+    if not TELEGRAM_OWNER_CHAT_ID:
+        log.warning("TELEGRAM_OWNER_CHAT_ID empty — fyi skipped")
+        return
+    try:
+        app = get_app()
+        await app.bot.send_message(
+            chat_id=TELEGRAM_OWNER_CHAT_ID,
+            text=text,
+            parse_mode=parse_mode,
+        )
+    except Exception as e:
+        evidence.log("error", "system", {"where": "send_fyi", "error": str(e)})
+
+
 async def send_handoff(h: Handoff) -> None:
     if not TELEGRAM_OWNER_CHAT_ID:
         log.warning("TELEGRAM_OWNER_CHAT_ID empty — handoff skipped")
