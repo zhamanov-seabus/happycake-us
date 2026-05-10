@@ -73,8 +73,16 @@ async def handle_customer_message(
         "phone": phone,
     })
 
-    # Recall this customer's history before invoking the agent. None for
-    # first-time customers; otherwise a compact summary the agent treats as
+    # Recall this customer's history before invoking the agent. Two passes:
+    #
+    #   1. Exact-key recall — match on durable identifier (phone / IG thread /
+    #      website visitor_id). Deterministic, no embeddings.
+    #   2. Semantic recall — vector-cosine search across ALL past orders for
+    #      messages whose intent matches a prior record ("the usual", "what
+    #      I had last time"). Catches anonymous returners whose visitor_id
+    #      rotated, and resolves underspecified intent from any channel.
+    #
+    # Both blocks get injected into the prompt; the agent treats them as
     # additional system context.
     rec = memory.recall(
         channel=channel,
@@ -89,7 +97,15 @@ async def handle_customer_message(
             "preferred_items": rec.get("preferred_items"),
         })
 
-    decision = claude_runner.respond_to_message(text, channel, memory_summary=memory.summary_for_prompt(rec))
+    semantic_block = memory.semantic_summary_for_prompt(text, channel=channel)
+    if semantic_block:
+        evidence.log("memory_semantic_recall", channel, {"query": text[:80]})
+
+    memory_summary = memory.summary_for_prompt(rec)
+    if semantic_block:
+        memory_summary = (memory_summary + "\n" + semantic_block) if memory_summary else semantic_block
+
+    decision = claude_runner.respond_to_message(text, channel, memory_summary=memory_summary)
 
     intent = decision.get("intent", "escalate")
     needs_approval = bool(decision.get("needs_owner_approval", False))
