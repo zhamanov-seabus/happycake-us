@@ -162,7 +162,7 @@ header.nav.is-scrolled { border-bottom-color: var(--cocoa-line); }
 .nav-inner {
   display: flex; align-items: center; justify-content: space-between;
   gap: 24px;
-  height: 92px;
+  height: 116px;
   max-width: var(--max);
   margin: 0 auto;
   padding: 0 var(--gutter);
@@ -182,12 +182,12 @@ header.nav.is-scrolled { border-bottom-color: var(--cocoa-line); }
    visible content fills the box. Sized by height; width follows aspect. */
 .wordmark-logo {
   display: block;
-  height: 72px;
+  height: 96px;
   width: auto;
   flex: none;
 }
 .wordmark-footer .wordmark-logo {
-  height: 96px;
+  height: 128px;
 }
 .nav-links {
   display: flex; gap: 28px;
@@ -220,7 +220,7 @@ header.nav.is-scrolled { border-bottom-color: var(--cocoa-line); }
   .nav-mobile-toggle { display: inline-flex; }
 }
 .mobile-menu {
-  position: fixed; top: 92px; left: 0; right: 0; bottom: 0;
+  position: fixed; top: 116px; left: 0; right: 0; bottom: 0;
   background: var(--cream);
   z-index: 49;
   padding: 32px var(--gutter);
