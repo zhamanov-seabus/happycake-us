@@ -3,7 +3,54 @@ import Layout from '../layouts/Layout.astro';
 import { withBase } from '../lib/url';
 
 const ogImg = '/images/happy-cake-hero-02.webp';
+
+const siteRoot = Astro.site?.toString().replace(/\/$/, '') ?? '';
+const franchiseService = {
+  '@context': 'https://schema.org',
+  '@type': 'Service',
+  serviceType: 'Franchise opportunity',
+  provider: {
+    '@type': 'Bakery',
+    name: 'HappyCake',
+    url: `${siteRoot}${withBase('/')}`,
+  },
+  name: 'HappyCake Franchise — Texas',
+  description: 'Operator-licensed HappyCake bakery franchise across Texas metros. Includes brand kit, recipes, AI sales+ops layer, supply chain access, and on-site launch crew.',
+  areaServed: [
+    { '@type': 'AdministrativeArea', name: 'Texas, United States' },
+    'Houston', 'Dallas', 'Austin', 'San Antonio', 'Fort Worth',
+    'El Paso', 'Lubbock', 'Amarillo', 'Plano', 'Frisco', 'The Woodlands',
+  ],
+  audience: {
+    '@type': 'BusinessAudience',
+    audienceType: 'Multi-unit operators, restaurant entrepreneurs, food-service investors',
+  },
+  offers: {
+    '@type': 'Offer',
+    name: 'Initial franchise package',
+    priceSpecification: {
+      '@type': 'PriceSpecification',
+      priceCurrency: 'USD',
+      minPrice: 250000,
+      maxPrice: 400000,
+    },
+    eligibleRegion: { '@type': 'AdministrativeArea', name: 'Texas, United States' },
+    availabilityStarts: '2026-05-10',
+  },
+  termsOfService: `${siteRoot}${withBase('/franchise/')}#franchise-apply`,
+};
+const breadcrumbs = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'HappyCake', item: `${siteRoot}${withBase('/')}` },
+    { '@type': 'ListItem', position: 2, name: 'Franchise — Texas', item: `${siteRoot}${withBase('/franchise/')}` },
+  ],
+};
 ---
+<script type="application/ld+json" set:html={JSON.stringify(franchiseService)} />
+<script type="application/ld+json" set:html={JSON.stringify(breadcrumbs)} />
+
 <Layout
   title="HappyCake Franchise — Texas"
   description="Bring HappyCake to your Texas city. The Sugar Land flagship, the playbook, the AI sales engine, and the supply chain — wrapped into a single Texas franchise."
