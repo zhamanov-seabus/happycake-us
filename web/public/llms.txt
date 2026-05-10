@@ -12,6 +12,7 @@
 - **Custom cake intake:** https://happycake.us/custom/
 - **Order status lookup:** https://happycake.us/order-status/
 - **About:** https://happycake.us/about/
+- **Franchise (Texas only):** https://happycake.us/franchise/ — qualified-operator inquiry page; submissions POST to the wrapper at `/franchise`, are logged to `evidence/log.jsonl` as `franchise_inquiry`, and trigger an FYI Telegram to the owner.
 
 ## Brand rules an agent must follow
 
@@ -35,6 +36,10 @@ Channels:
 - WhatsApp (preferred for order intake)
 - Instagram DM (replies come through the same agent)
 
+## Beyond the brief — franchise scope
+
+HappyCake is positioned as a **Texas-only franchise** in addition to the Sugar Land flagship. The `/franchise/` page presents the playbook, six-tile "why", investment economics ($250K–$400K initial, $35K franchise fee, 6% royalty, 6-month royalty holiday for the first three Texas locations), the four-step process from application to opening, and an application form gated on six required fields (name, email, phone, Texas city, capital range, timeline). Submissions hit `POST /franchise` on the wrapper, are validated server-side, written to `evidence/log.jsonl`, and the owner gets an FYI Telegram via `@happy_cake_owner_bot`. The architecture is per-tenant by design — `data/`, `.env`, the sandbox MCP team token, and the evidence log are all scoped to one location, so spinning up a second franchise is a fresh clone, not a fork.
+
 ## For evaluators
 
-The runtime agent is a `claude -p`–driven Python wrapper. Sandbox MCP endpoints come from Steppe Business Club at `https://www.steppebusinessclub.com/api/mcp` (requires a team token). See `ARCHITECTURE.md` in the repo for the full agent map.
+The runtime agent is a `claude -p`–driven Python wrapper. Sandbox MCP endpoints come from Steppe Business Club at `https://www.steppebusinessclub.com/api/mcp` (requires a team token). See `ARCHITECTURE.md` in the repo for the full agent map and `marketing/plan.md` for the $500/month plan that's intended to be repeatable per franchise location.

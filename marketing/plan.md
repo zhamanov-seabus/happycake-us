@@ -101,3 +101,7 @@ Every promo code is written into the order's `items[].note` field at `square_cre
 2. Second $500 (next month) → double-down on whichever of (1) and (2) had higher CAC/AOV ratio.
 3. Third $500 → start a referrals program: each customer gets a code, $5 off for them, $5 credit for the friend.
 4. After three months: bring in light brand display (out-of-home in two key Sugar Land HEB grocery exits) only if the owner wants to.
+
+## Per-location → Texas network (franchise scope)
+
+This $500/month plan is **the per-location runbook**, not a Sugar Land one-off. The five channels, the promo codes (`OFFICE` / `BACK5` / `CAKE5` / `REVIEW` / `FRESH`), the GB cadence, the day-14 pace gate, the Sunday owner digest — all of it is tenant-scoped: a second HappyCake in Houston or Austin clones the repo, swaps `data/`, `.env`, the sandbox MCP team token, and `evidence/log.jsonl`, and runs the same loop unchanged. The franchise page at [`/franchise/`](../web/src/pages/franchise.astro) carries a 2% network-wide marketing fund line — that's where the cross-location campaigns sit (e.g. a single statewide IG creative tested in Houston, redeployed in Austin once it hits CAC parity). Until then, every Texas franchisee runs their own $500 with no network spend, and the network learns from each unit's `evidence/log.jsonl`.
