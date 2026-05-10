@@ -7,6 +7,8 @@ This is a working narrow system, not a broad concept. The vertical slice is **In
 
 **Business impact hypothesis:** see [`marketing/plan.md`](marketing/plan.md) for the $500/month plan grounded in the sandbox's 6-month sales data — projected 8.4×–12.2× revenue impact.
 
+**Beyond the brief — Texas franchise scope:** the same stack is positioned as a multi-location franchise package, not a one-off bakery. [`/franchise/`](web/src/pages/franchise.astro) ships as a full inquiry page (six-tile "why", $250K–$400K investment economics, 6% royalty / 6-month royalty holiday for the first three Texas locations, four-step process, application form with six required fields, FAQ) wired to a server-side `POST /franchise` endpoint on the wrapper that validates fields, writes a `franchise_inquiry` row to `evidence/log.jsonl`, and sends the owner an FYI Telegram. The architecture is **per-tenant by design** — `data/catalog.yml`, `data/brandbook.md`, `data/ingredients.yml`, `.env`, the sandbox MCP team token, and `evidence/log.jsonl` are all scoped to one location, so a second franchise is a fresh clone, not a fork. The marketing playbook in [`marketing/plan.md`](marketing/plan.md) is itself the per-location runbook.
+
 ---
 
 ## What's in here
