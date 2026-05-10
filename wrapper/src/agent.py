@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 
-from . import claude_runner, evidence, mcp_client, owner_bot
+from . import claude_runner, evidence, mcp_client, order_events, owner_bot
 from .config import CATALOG_PATH
 
 
@@ -62,6 +62,7 @@ async def handle_customer_message(
     intent = decision.get("intent", "escalate")
     needs_approval = bool(decision.get("needs_owner_approval", False))
 
+    order_id: str | None = None
     if intent in ("order_intent", "complaint", "escalate") or needs_approval:
         order_id = f"hc_{secrets.token_hex(4)}"
         items_label = _format_items(decision.get("items"))
@@ -86,6 +87,7 @@ async def handle_customer_message(
         except Exception as e:
             evidence.log("error", "system", {"where": "send_handoff", "error": str(e)})
 
+    decision["order_id"] = order_id
     return decision
 
 
@@ -93,6 +95,8 @@ async def on_owner_decision(order_id: str, verb: str, handoff: dict[str, Any]) -
     """Owner pressed Approve/Edit/Reject. Drive side effects."""
     raw = handoff.get("raw_decision", {})
     channel = handoff.get("channel", "instagram")
+
+    square_order_id: str | None = None
 
     if verb == "approve":
         items = raw.get("items") or []
@@ -133,16 +137,33 @@ async def on_owner_decision(order_id: str, verb: str, handoff: dict[str, Any]) -
             except Exception as e:
                 evidence.log("error", "system", {"where": "approve_create_order", "error": str(e)})
 
-        # Reply to the customer on their channel
-        await _reply_to_customer(handoff, _approval_message(handoff))
+        # Reply to the customer on their channel (IG/WA outbound) and also
+        # publish to any SSE subscribers (website chat widget).
+        approval_text = _approval_message(handoff)
+        await _reply_to_customer(handoff, approval_text)
+        await order_events.publish(order_id, {
+            "status": "approved",
+            "message": approval_text,
+            "square_order_id": square_order_id,
+            "items": handoff.get("items_label"),
+            "pickup_time": handoff.get("pickup_time"),
+        })
 
     elif verb == "reject":
-        await _reply_to_customer(handoff, _rejection_message(handoff))
+        rejection_text = _rejection_message(handoff)
+        await _reply_to_customer(handoff, rejection_text)
+        await order_events.publish(order_id, {
+            "status": "rejected",
+            "message": rejection_text,
+        })
 
     elif verb == "edit":
-        # Edit is a "send a follow-up question to customer" path.
-        # For the demo we just acknowledge to the customer that the team is reviewing.
-        await _reply_to_customer(handoff, "Quick check — the team's reviewing one detail and will be back to you shortly. Thanks for your patience.")
+        edit_text = "Quick check — the team's reviewing one detail and will be back to you shortly. Thanks for your patience."
+        await _reply_to_customer(handoff, edit_text)
+        await order_events.publish(order_id, {
+            "status": "edit",
+            "message": edit_text,
+        })
 
 
 def _kitchen_id(variation_id: str) -> str:

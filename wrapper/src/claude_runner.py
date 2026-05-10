@@ -40,6 +40,39 @@ def _load_system_prompt() -> str:
     return f"{base}\n\n## Live catalog (variation_ids to use in `items[*].variation_id`)\n\n{_catalog_block()}\n"
 
 
+def _channel_rules(channel: str) -> str:
+    """Per-channel closing-pattern and behaviour notes injected per request."""
+    if channel == "website":
+        return (
+            "- The customer is **already on the site**. Do NOT tell them to "
+            "'order on the site at happycake.us'. They are here.\n"
+            "- For order intents, your `reply_text` should confirm what they "
+            "asked for, name the variation, the price, the lead time, and say "
+            "you're passing it to the team for confirmation. Example closing: "
+            "'I've sent this to the team — they'll confirm pickup time within "
+            "the hour. You'll see a confirmation here.'\n"
+            "- Do NOT include WhatsApp or happycake.us in the closing. If you "
+            "want to suggest a backup channel, use 'or message us on WhatsApp "
+            "if you'd rather chat there'.\n"
+            "- Set `intent: order_intent` whenever the customer wants a "
+            "specific cake — even if a date isn't given yet. Owner approval "
+            "still gates the actual order creation."
+        )
+    if channel == "instagram":
+        return (
+            "- Reply on Instagram. Keep it short.\n"
+            "- Closing pattern: 'Order on the site at happycake.us or send a "
+            "message on WhatsApp.'"
+        )
+    if channel == "whatsapp":
+        return (
+            "- Reply on WhatsApp. Keep it short.\n"
+            "- Closing pattern: 'Order on the site at happycake.us — or stay "
+            "on WhatsApp and we'll take it from here.'"
+        )
+    return "- Closing pattern: 'Order on the site at happycake.us or send a message on WhatsApp.'"
+
+
 def _strip_fence(text: str) -> str:
     """Remove ```json ... ``` fencing if Claude included it despite instructions."""
     text = text.strip()
@@ -49,10 +82,19 @@ def _strip_fence(text: str) -> str:
     return text
 
 
-def run_claude(user_prompt: str, *, timeout: float = 90.0) -> str:
+def run_claude(user_prompt: str, *, channel: str = "website", timeout: float = 90.0) -> str:
     """Invoke `claude -p` with our system prompt + the user prompt. Return raw stdout text."""
     system = _load_system_prompt()
-    full_prompt = f"{system}\n\n---\n\nCustomer message:\n{user_prompt}"
+    channel_block = _channel_rules(channel)
+    full_prompt = (
+        f"{system}\n\n"
+        f"---\n\n"
+        f"## This conversation\n\n"
+        f"- Channel: **{channel}**\n"
+        f"{channel_block}\n\n"
+        f"---\n\n"
+        f"Customer message:\n{user_prompt}"
+    )
     cmd = [
         "claude",
         "-p",
@@ -90,7 +132,7 @@ def respond_to_message(user_prompt: str, channel: str) -> dict[str, Any]:
 
     On parse failure, returns a fallback dict with intent='escalate'.
     """
-    raw = run_claude(user_prompt)
+    raw = run_claude(user_prompt, channel=channel)
     body = _strip_fence(raw)
     evidence.log("claude_call", channel, {"prompt": user_prompt[:500], "raw": raw[:1500]})
     try:

@@ -34,6 +34,35 @@ const wrapperUrl = import.meta.env.PUBLIC_WRAPPER_URL ?? 'http://localhost:8000'
     messages.scrollTop = messages.scrollHeight;
   }
 
+  // One open EventSource at a time; replaced when a new order starts.
+  let activeEs = null;
+
+  function subscribeToOrder(orderId) {
+    if (!orderId) return;
+    if (activeEs) {
+      try { activeEs.close(); } catch {}
+    }
+    const url = wrapperUrl + '/order/' + encodeURIComponent(orderId) + '/events';
+    activeEs = new EventSource(url);
+    activeEs.addEventListener('status', (ev) => {
+      try {
+        const update = JSON.parse(ev.data);
+        const text = update.message || ('Status: ' + update.status);
+        addMessage('bot', text);
+        if (update.status === 'approved' || update.status === 'rejected') {
+          try { activeEs.close(); } catch {}
+          activeEs = null;
+        }
+      } catch (e) {}
+    });
+    activeEs.addEventListener('error', () => {
+      // EventSource auto-reconnects on transient errors; only nuke if closed.
+      if (activeEs && activeEs.readyState === EventSource.CLOSED) {
+        activeEs = null;
+      }
+    });
+  }
+
   async function send(text) {
     if (!text) return;
     addMessage('you', text);
@@ -47,6 +76,8 @@ const wrapperUrl = import.meta.env.PUBLIC_WRAPPER_URL ?? 'http://localhost:8000'
       });
       const data = await r.json();
       messages.lastChild.querySelector('.bubble').textContent = data.reply || 'Sorry — let me get back to you on WhatsApp.';
+      // If this turn produced an order id, listen for owner-side status events.
+      subscribeToOrder(data.order_id);
     } catch (err) {
       messages.lastChild.querySelector('.bubble').textContent = 'The site assistant is offline. Send a message on WhatsApp or order at happycake.us.';
     }
