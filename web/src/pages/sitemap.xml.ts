@@ -2,7 +2,9 @@ import type { APIRoute } from 'astro';
 import { getCatalog } from '../lib/catalog';
 
 export const GET: APIRoute = ({ site }) => {
-  const base = site?.toString().replace(/\/$/, '') ?? 'https://happycake.us';
+  const root = site?.toString().replace(/\/$/, '') ?? 'https://happycake.us';
+  const basePath = (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '');
+  const base = root + basePath;
   const catalog = getCatalog();
   const urls = [
     `${base}/`,

@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getCatalog, priceLabel } from '../lib/catalog';
+import { withBase } from '../lib/url';
 
 const catalog = getCatalog();
 ---
@@ -19,8 +20,8 @@ const catalog = getCatalog();
           <div class="grid">
             {items.map(p => (
               <article class="card">
-                <a href={`/product/${p.slug}/`}>
-                  <img src={p.photo} alt={p.name} loading="lazy" />
+                <a href={withBase(`/product/${p.slug}/`)}>
+                  <img src={withBase(p.photo)} alt={p.name} loading="lazy" />
                 </a>
                 <div class="body">
                   <h3 set:html={p.display_name} />
@@ -32,7 +33,7 @@ const catalog = getCatalog();
                     <span class="price">{priceLabel(p)}</span>
                     <span class="weight">{p.weight}</span>
                   </div>
-                  <a href={`/product/${p.slug}/`} class="cta">View &amp; order</a>
+                  <a href={withBase(`/product/${p.slug}/`)} class="cta">View &amp; order</a>
                 </div>
               </article>
             ))}

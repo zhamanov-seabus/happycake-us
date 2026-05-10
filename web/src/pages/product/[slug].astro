@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCatalog, priceLabel, type Product } from '../../lib/catalog';
+import { withBase } from '../../lib/url';
 
 export function getStaticPaths() {
   const catalog = getCatalog();
@@ -12,13 +13,15 @@ export function getStaticPaths() {
 
 const { product: p, business: b } = Astro.props;
 
+const siteRoot = Astro.site?.toString().replace(/\/$/, '') ?? '';
+
 // Per-product JSON-LD
 const productJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Product',
   name: p.name,
   description: p.description,
-  image: `https://happycake.us${p.photo}`,
+  image: `${siteRoot}${withBase(p.photo)}`,
   brand: { '@type': 'Brand', name: b.name },
   category: p.category,
   weight: p.weight,
@@ -33,7 +36,7 @@ const productJsonLd = {
 ---
 <Layout title={p.display_name} description={p.description} ogImage={p.photo}>
   <section class="container product">
-    <img src={p.photo} alt={p.name} />
+    <img src={withBase(p.photo)} alt={p.name} />
     <div>
       <h1 set:html={p.display_name} />
       <div class="price-row">{priceLabel(p)} · {p.weight}</div>

@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import Assistant from '../components/Assistant.astro';
 import { getCatalog } from '../lib/catalog';
+import { withBase } from '../lib/url';
 
 interface Props {
   title: string;
@@ -16,17 +17,19 @@ const b = catalog.business;
 const fullTitle = title.includes(b.name) ? title : `${title} — ${b.name}`;
 const desc = description ?? `${b.tagline} ${b.slogan} HappyCake in Sugar Land, Texas.`;
 const og = ogImage ?? '/images/happy-cake-hero-01.webp';
+const ogAbs = og.startsWith('http') ? og : `${Astro.site}${withBase(og).replace(/^\//, '')}`;
 
 // LocalBusiness JSON-LD — present on every page
+const siteRoot = Astro.site?.toString().replace(/\/$/, '') ?? '';
 const localBusiness = {
   '@context': 'https://schema.org',
   '@type': 'Bakery',
   name: b.name,
   legalName: b.legal_name,
   slogan: b.slogan,
-  url: 'https://happycake.us',
-  image: 'https://happycake.us/images/happy-cake-hero-01.webp',
-  logo: 'https://happycake.us/images/logo.png',
+  url: `${siteRoot}${withBase('/')}`,
+  image: `${siteRoot}${withBase('/images/happy-cake-hero-01.webp')}`,
+  logo: `${siteRoot}${withBase('/images/logo.png')}`,
   address: {
     '@type': 'PostalAddress',
     addressLocality: b.location.city,
@@ -52,9 +55,9 @@ const localBusiness = {
     <meta name="description" content={desc} />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={desc} />
-    <meta property="og:image" content={`https://happycake.us${og}`} />
+    <meta property="og:image" content={ogAbs} />
     <meta property="og:type" content="website" />
-    <link rel="icon" type="image/png" href="/images/logo.png" />
+    <link rel="icon" type="image/png" href={withBase('/images/logo.png')} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -63,14 +66,14 @@ const localBusiness = {
   <body>
     <header class="site">
       <div class="bar">
-        <a href="/" class="brand">
-          <img src="/images/logo.png" alt="HappyCake logo" />
+        <a href={withBase('/')} class="brand">
+          <img src={withBase('/images/logo.png')} alt="HappyCake logo" />
           <span class="name">HappyCake</span>
         </a>
         <nav>
-          <a href="/catalog/">Catalog</a>
-          <a href="/policies/">Policies</a>
-          <a href="/about/">About</a>
+          <a href={withBase('/catalog/')}>Catalog</a>
+          <a href={withBase('/policies/')}>Policies</a>
+          <a href={withBase('/about/')}>About</a>
         </nav>
       </div>
     </header>

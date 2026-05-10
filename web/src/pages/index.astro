@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getCatalog, priceLabel } from '../lib/catalog';
+import { withBase } from '../lib/url';
 
 const catalog = getCatalog();
 const featured = catalog.products.filter(p => p.tags.includes('classic') || p.tags.includes('signature'));
@@ -11,10 +12,10 @@ const featured = catalog.products.filter(p => p.tags.includes('classic') || p.ta
       <h1>It's just like homemade.</h1>
       <p class="lead">HappyCake makes the kind of cakes you remember. Tender layers, real cream, baked in our Sugar Land kitchen and ready by closing time.</p>
       <p>
-        <a href="/catalog/" class="cta-link" style="background:var(--happy-blue);color:white;padding:0.7rem 1.4rem;border-radius:8px;text-decoration:none;font-weight:500;display:inline-block;">See today's cakes</a>
+        <a href={withBase('/catalog/')} class="cta-link" style="background:var(--happy-blue);color:white;padding:0.7rem 1.4rem;border-radius:8px;text-decoration:none;font-weight:500;display:inline-block;">See today's cakes</a>
       </p>
     </div>
-    <img src="/images/happy-cake-hero-01.webp" alt="A whole honey cake on the counter at HappyCake Sugar Land." />
+    <img src={withBase('/images/happy-cake-hero-01.webp')} alt="A whole honey cake on the counter at HappyCake Sugar Land." />
   </section>
 
   <section class="container">
@@ -22,8 +23,8 @@ const featured = catalog.products.filter(p => p.tags.includes('classic') || p.ta
     <div class="grid">
       {featured.map(p => (
         <article class="card">
-          <a href={`/product/${p.slug}/`}>
-            <img src={p.photo} alt={p.name} loading="lazy" />
+          <a href={withBase(`/product/${p.slug}/`)}>
+            <img src={withBase(p.photo)} alt={p.name} loading="lazy" />
           </a>
           <div class="body">
             <h3 set:html={p.display_name} />
@@ -32,7 +33,7 @@ const featured = catalog.products.filter(p => p.tags.includes('classic') || p.ta
               <span class="price">{priceLabel(p)}</span>
               <span class="weight">{p.weight}</span>
             </div>
-            <a href={`/product/${p.slug}/`} class="cta">View</a>
+            <a href={withBase(`/product/${p.slug}/`)} class="cta">View</a>
           </div>
         </article>
       ))}
