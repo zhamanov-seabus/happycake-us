@@ -5,7 +5,7 @@ import json
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -50,6 +50,29 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ---------- Rate limiting ----------
+# Open public endpoints (/chat, /franchise) are protected so a bored adversary
+# can't burn Claude credits or DoS the wrapper. Per-IP buckets via slowapi.
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+from fastapi.responses import JSONResponse
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def _rate_limit_exceeded(request, exc):
+    return JSONResponse(
+        status_code=429,
+        content={
+            "ok": False,
+            "error": "rate_limited",
+            "message": "Too many requests — please slow down. Try again in a minute.",
+        },
+    )
 
 
 @app.get("/health")
@@ -178,7 +201,8 @@ class FranchiseIn(BaseModel):
 
 
 @app.post("/franchise")
-async def franchise(payload: FranchiseIn) -> dict:
+@limiter.limit("5/minute")
+async def franchise(request: Request, payload: FranchiseIn) -> dict:
     """Capture a Texas franchise inquiry. Validates required fields, logs to
     evidence/log.jsonl, and sends an FYI card to the owner Telegram bot.
 
@@ -261,7 +285,8 @@ class ChatOut(BaseModel):
 
 
 @app.post("/chat", response_model=ChatOut)
-async def chat(payload: ChatIn) -> ChatOut:
+@limiter.limit("20/minute")
+async def chat(request: Request, payload: ChatIn) -> ChatOut:
     decision = await agent.handle_customer_message(
         channel="website",
         customer_name="Site visitor",

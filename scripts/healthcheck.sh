@@ -119,8 +119,30 @@ if [[ -n "${TELEGRAM_BOT_TOKEN:-}" && "$TELEGRAM_BOT_TOKEN" != REPLACE_* ]]; the
 fi
 echo
 
-# --- 6. Tunnel staleness check (the silent killer) -----------------------
-echo "6. Public tunnel"
+# --- 6. Embedding model availability (silent first-use blocker) ---------
+echo "6. Customer-memory embedding model"
+if [[ -d "$HOME/.cache/fastembed" ]] || [[ -d "$HOME/.cache/huggingface/hub" ]]; then
+  ok "fastembed cache directory exists"
+  emb_ok=$(uv run --active --project wrapper python -c "
+from happycake_wrapper import embeddings
+print('OK' if embeddings.warm() else 'FAIL')
+" 2>/dev/null | tail -1)
+  if [[ "$emb_ok" == "OK" ]]; then
+    ok "embedding model loads (~120MB cached)"
+  else
+    warn "fastembed model could not initialise — semantic recall disabled, exact-key memory still works"
+    warn "  First /chat call may block ~30s downloading the model on its own"
+    warn_count=$((warn_count+1))
+  fi
+else
+  warn "fastembed cache empty — first /chat call will download ~120MB and may block ~30s"
+  warn "  To pre-warm now: uv run --project wrapper python -c 'from happycake_wrapper import embeddings; embeddings.warm()'"
+  warn_count=$((warn_count+1))
+fi
+echo
+
+# --- 7. Tunnel staleness check (the silent killer) -----------------------
+echo "7. Public tunnel"
 if [[ -n "${PUBLIC_TUNNEL_URL:-}" && "${PUBLIC_TUNNEL_URL:-}" != https://your-tunnel* ]]; then
   tunnel_resp="$(curl -sf --max-time 5 "${PUBLIC_TUNNEL_URL}/health" 2>/dev/null)"
   if [[ -n "$tunnel_resp" ]]; then

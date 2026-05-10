@@ -12,6 +12,7 @@
 - **Custom cake intake:** https://happycake.us/custom/
 - **Order status lookup:** https://happycake.us/order-status/
 - **About:** https://happycake.us/about/
+- **Wrapper JSON-RPC catalogue:** https://happycake.us/api/agent.json — every endpoint the on-site assistant exposes, with input/output schemas + examples; read this before scripting against the wrapper.
 - **Franchise (Texas only):** https://happycake.us/franchise/ — qualified-operator inquiry page; submissions POST to the wrapper at `/franchise`, are logged to `evidence/log.jsonl` as `franchise_inquiry`, and trigger an FYI Telegram to the owner.
 
 ## Brand rules an agent must follow
