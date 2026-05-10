@@ -165,6 +165,87 @@ async def lead(payload: LeadIn) -> dict:
     return {"ok": True, "message": "Got it — we'll send a heads-up before each Friday batch."}
 
 
+# ---------- Franchise inquiry ----------
+
+class FranchiseIn(BaseModel):
+    name: str
+    email: str
+    phone: str
+    city: str
+    capital: str            # one of: "250-400k" / "400-600k" / "600k+" / "raising"
+    timeline: str           # one of: "0-3mo" / "3-6mo" / "6-12mo" / "exploring"
+    message: str | None = None
+
+
+@app.post("/franchise")
+async def franchise(payload: FranchiseIn) -> dict:
+    """Capture a Texas franchise inquiry. Validates required fields, logs to
+    evidence/log.jsonl, and sends an FYI card to the owner Telegram bot.
+
+    The form is mandatory: name, email, phone, Texas city, capital range,
+    timeline. Anything missing or malformed bounces back with an error so the
+    page can prompt the visitor to fix it. The owner gets a Telegram message
+    so they can follow up within the same day."""
+    name = (payload.name or "").strip()
+    email = (payload.email or "").strip()
+    phone = (payload.phone or "").strip()
+    city = (payload.city or "").strip()
+    capital = (payload.capital or "").strip()
+    timeline = (payload.timeline or "").strip()
+    message = (payload.message or "").strip()
+
+    errors: list[str] = []
+    if len(name) < 2 or len(name) > 80:
+        errors.append("name")
+    if "@" not in email or "." not in email.split("@")[-1] or len(email) > 254:
+        errors.append("email")
+    digits = sum(c.isdigit() for c in phone)
+    if digits < 7 or len(phone) > 32:
+        errors.append("phone")
+    if len(city) < 2 or len(city) > 80:
+        errors.append("city")
+    if capital not in {"250-400k", "400-600k", "600k+", "raising"}:
+        errors.append("capital")
+    if timeline not in {"0-3mo", "3-6mo", "6-12mo", "exploring"}:
+        errors.append("timeline")
+    if errors:
+        return {"ok": False, "error": "missing_or_invalid", "fields": errors}
+
+    evidence.log("franchise_inquiry", "website", {
+        "name": name[:80],
+        "email": email,
+        "phone": phone[:32],
+        "city": city[:80],
+        "capital": capital,
+        "timeline": timeline,
+        "message": message[:1000],
+    })
+
+    try:
+        import html
+        e = html.escape
+        text = (
+            f"🤝 <b>Franchise inquiry — Texas</b>\n"
+            f"<b>From:</b> {e(name)}\n"
+            f"<b>Contact:</b> {e(email)} · {e(phone)}\n"
+            f"<b>City:</b> {e(city)}\n"
+            f"<b>Capital:</b> {e(capital)}\n"
+            f"<b>Timeline:</b> {e(timeline)}\n"
+            + (f"\n<i>Note:</i> {e(message[:600])}" if message else "")
+        )
+        await owner_bot.send_fyi(text)
+    except Exception as ex:
+        evidence.log("error", "system", {"where": "franchise_inquiry_fyi", "error": str(ex)})
+
+    return {
+        "ok": True,
+        "message": (
+            f"Thanks, {name.split()[0]} — we've got your details. "
+            f"A HappyCake partner will reach out to you in {city} within the next business day."
+        ),
+    }
+
+
 # ---------- On-site chat ----------
 
 class ChatIn(BaseModel):

@@ -249,11 +249,12 @@ footer.footer {
 footer.footer .wordmark { color: #FBF7F1; font-size: 28px; }
 .footer-top {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr;
   gap: 32px;
   padding-bottom: 40px;
   border-bottom: 1px solid rgba(251, 247, 241, 0.12);
 }
+@media (max-width: 1080px) { .footer-top { grid-template-columns: 1.4fr 1fr 1fr; } }
 @media (max-width: 880px) { .footer-top { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 520px) { .footer-top { grid-template-columns: 1fr; } }
 .footer-col h4 {
