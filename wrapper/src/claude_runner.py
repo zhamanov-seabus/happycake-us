@@ -123,17 +123,19 @@ def _strip_fence(text: str) -> str:
     return text
 
 
-def run_claude(user_prompt: str, *, channel: str = "website", timeout: float = 90.0) -> str:
+def run_claude(user_prompt: str, *, channel: str = "website", timeout: float = 90.0, memory_summary: str = "") -> str:
     """Invoke `claude -p` with our system prompt + the user prompt. Return raw stdout text."""
     system = _load_system_prompt()
     channel_block = _channel_rules(channel)
+    memory_block = (f"\n{memory_summary}\n---\n\n" if memory_summary else "")
     full_prompt = (
         f"{system}\n\n"
         f"---\n\n"
         f"## This conversation\n\n"
         f"- Channel: **{channel}**\n"
         f"{channel_block}\n\n"
-        f"---\n\n"
+        f"---\n"
+        f"{memory_block}"
         f"Customer message:\n{user_prompt}"
     )
     cmd = [
@@ -168,12 +170,12 @@ def run_claude(user_prompt: str, *, channel: str = "website", timeout: float = 9
     return proc.stdout
 
 
-def respond_to_message(user_prompt: str, channel: str) -> dict[str, Any]:
+def respond_to_message(user_prompt: str, channel: str, memory_summary: str = "") -> dict[str, Any]:
     """Run the agent and parse the JSON decision. Always returns a dict.
 
     On parse failure, returns a fallback dict with intent='escalate'.
     """
-    raw = run_claude(user_prompt, channel=channel)
+    raw = run_claude(user_prompt, channel=channel, memory_summary=memory_summary)
     body = _strip_fence(raw)
     evidence.log("claude_call", channel, {"prompt": user_prompt[:500], "raw": raw[:1500]})
     try:

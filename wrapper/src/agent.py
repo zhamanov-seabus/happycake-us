@@ -22,7 +22,7 @@ from typing import Any
 
 import yaml
 
-from . import claude_runner, evidence, inventory, mcp_client, order_events, owner_bot
+from . import claude_runner, evidence, inventory, mcp_client, memory, order_events, owner_bot
 from .config import CATALOG_PATH
 
 
@@ -73,7 +73,23 @@ async def handle_customer_message(
         "phone": phone,
     })
 
-    decision = claude_runner.respond_to_message(text, channel)
+    # Recall this customer's history before invoking the agent. None for
+    # first-time customers; otherwise a compact summary the agent treats as
+    # additional system context.
+    rec = memory.recall(
+        channel=channel,
+        handle=thread_id or customer_handle,
+        phone=phone,
+        customer_name=customer_name,
+    )
+    if rec:
+        evidence.log("memory_recall", channel, {
+            "key": rec.get("key"),
+            "order_count": rec.get("order_count"),
+            "preferred_items": rec.get("preferred_items"),
+        })
+
+    decision = claude_runner.respond_to_message(text, channel, memory_summary=memory.summary_for_prompt(rec))
 
     intent = decision.get("intent", "escalate")
     needs_approval = bool(decision.get("needs_owner_approval", False))
@@ -271,6 +287,21 @@ async def _attempt_auto_confirm(
         "same_day": same_day,
     })
 
+    # Persist to per-customer memory so the next conversation greets them as
+    # a returning customer. Prefer the name the AGENT extracted from the
+    # message ("Maria") over the route's placeholder ("Site visitor").
+    memory.record_order(
+        channel=channel,
+        customer_name=(decision.get("customer_name") or customer_name),
+        handle=thread_id or customer_handle,
+        phone=phone,
+        items_label=items_label,
+        pickup_time=pickup_iso,
+        notes=decision.get("customer_note"),
+        order_id=order_id,
+        items=items,
+    )
+
     # Publish to any SSE/polling subscribers (so /order-status/ pages update)
     await order_events.publish(order_id, {
         "status": "approved",
@@ -424,6 +455,21 @@ async def on_owner_decision(order_id: str, verb: str, handoff: dict[str, Any]) -
                     })
             except Exception as e:
                 evidence.log("error", "system", {"where": "approve_create_order", "error": str(e)})
+
+        # Persist to per-customer memory: the order is real now.
+        if items:
+            raw_handoff = handoff.get("raw_decision") or {}
+            memory.record_order(
+                channel=channel,
+                customer_name=handoff.get("customer_name"),
+                handle=raw_handoff.get("thread_id") or handoff.get("customer_handle"),
+                phone=raw_handoff.get("phone"),
+                items_label=handoff.get("items_label") or _format_items(items),
+                pickup_time=handoff.get("pickup_time"),
+                notes=handoff.get("notes"),
+                order_id=order_id,
+                items=items,
+            )
 
         # Reply to the customer on their channel (IG/WA outbound) and also
         # publish to any SSE subscribers (website chat widget).
