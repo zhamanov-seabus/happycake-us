@@ -75,6 +75,73 @@ async def marketing_draft(payload: DraftIn) -> dict:
     return {"ok": True, **out}
 
 
+# ---------- Cake configurator (machine-readable) ----------
+
+class ConfigureIn(BaseModel):
+    occasion: str | None = None
+    people: int | None = None
+    dietary: list[str] | None = None
+    theme: str | None = None
+    pickup_at: str | None = None
+
+
+@app.post("/configure")
+async def configure(payload: ConfigureIn) -> dict:
+    """Deterministic cake recommendation. Used by external AI agents to
+    reach order intent without scraping. Mirrors /api/configure.json
+    on the static site but accepts a real POST body."""
+    import yaml
+    from .config import CATALOG_PATH
+    catalog = yaml.safe_load(CATALOG_PATH.read_text(encoding="utf-8"))
+    products = {p["slug"]: p for p in catalog["products"]}
+
+    occasion = (payload.occasion or "").lower().strip()
+    people = payload.people or 0
+    dietary = [d.lower().strip() for d in (payload.dietary or [])]
+    theme = (payload.theme or "").strip()
+
+    def pick():
+        if occasion == "birthday" or theme:
+            return products.get("custom-birthday-cake")
+        if occasion == "office" or people >= 12:
+            return products.get("office-dessert-box")
+        if people >= 6:
+            return products.get("whole-honey-cake")
+        return products.get("honey-cake-slice")
+
+    p = pick() or products["honey-cake-slice"]
+    allergens = p.get("allergens") or {}
+    has_nuts = "tree_nuts" in (allergens.get("contains") or []) + (allergens.get("traces") or [])
+    allergen_warning = (
+        "This product is made in a kitchen that handles tree nuts; flag your nut-free requirement so the team can confirm before accepting."
+        if "nut-free" in dietary and has_nuts else None
+    )
+
+    return {
+        "inputs": {
+            "occasion": occasion, "people": people,
+            "dietary": dietary, "theme": theme, "pickup_at": payload.pickup_at,
+        },
+        "recommended": {
+            "variation_id": p["variation_id"],
+            "slug": p["slug"],
+            "display_name": p["display_name"],
+            "name": p["name"],
+            "price_usd": p["price_usd"],
+            "weight": p["weight"],
+            "lead_time_minutes": p.get("lead_time_minutes"),
+            "requires_owner_approval": bool(p.get("requires_owner_approval")),
+            "allergens": allergens or None,
+            "allergen_warning": allergen_warning,
+            "url": f"https://happycake.us/product/{p['slug']}/",
+        },
+        "next_step": {
+            "preferred": "POST /chat with `message` describing the order in plain English; agent confirms and queues an owner card.",
+            "alternative": f"Open https://happycake.us/product/{p['slug']}/",
+        },
+    }
+
+
 # ---------- Lead capture ----------
 
 class LeadIn(BaseModel):
