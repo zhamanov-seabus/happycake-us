@@ -22,15 +22,23 @@ SYSTEM_PROMPT_PATH = Path(__file__).parent / "prompts" / "system.md"
 def _catalog_block() -> str:
     """Render an inline catalog table with the canonical variation_ids the agent must use."""
     cat = yaml.safe_load(CATALOG_PATH.read_text(encoding="utf-8"))
-    rows = ["| variation_id | display | price | weight | category | notes |", "|---|---|---|---|---|---|"]
+    rows = ["| variation_id | display | price | weight | category | contains | traces | notes |",
+            "|---|---|---|---|---|---|---|---|"]
     for p in cat["products"]:
         notes = []
         if p.get("requires_owner_approval"):
             notes.append("requires owner approval")
         if p.get("lead_time_minutes"):
             notes.append(f"{p['lead_time_minutes']}-min lead")
+        allergens = p.get("allergens") or {}
+        contains = ", ".join(allergens.get("contains") or []) or "—"
+        traces = ", ".join(allergens.get("traces") or []) or "—"
+        if allergens.get("note"):
+            notes.append(allergens["note"])
         rows.append(
-            f"| `{p['variation_id']}` | {p['display_name']} | ${p['price_usd']:.2f} | {p['weight']} | {p['category']} | {'; '.join(notes) or '—'} |"
+            f"| `{p['variation_id']}` | {p['display_name']} | ${p['price_usd']:.2f} | "
+            f"{p['weight']} | {p['category']} | {contains} | {traces} | "
+            f"{'; '.join(notes) or '—'} |"
         )
     return "\n".join(rows)
 
