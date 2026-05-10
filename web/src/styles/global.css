@@ -545,6 +545,34 @@ section { margin: 3rem 0; }
 }
 .assistant-panel .msg.you .bubble { background: var(--honey); color: white; }
 .assistant-panel .msg.bot .bubble { background: #fff; color: var(--cocoa); border: 1px solid var(--cocoa-line); }
+.assistant-panel .msg.bot .bubble.thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cocoa-soft, #6b5944);
+  font-style: italic;
+}
+.assistant-panel .msg.bot .bubble.thinking .thinking-text {
+  opacity: 0.85;
+  transition: opacity 0.3s ease;
+}
+.assistant-panel .msg.bot .bubble.thinking .dots {
+  display: inline-flex; gap: 3px; margin-left: 4px;
+}
+.assistant-panel .msg.bot .bubble.thinking .dots i {
+  width: 5px; height: 5px;
+  background: currentColor;
+  border-radius: 50%;
+  display: inline-block;
+  opacity: 0.4;
+  animation: hc-dot 1.1s infinite ease-in-out;
+}
+.assistant-panel .msg.bot .bubble.thinking .dots i:nth-child(2) { animation-delay: 0.18s; }
+.assistant-panel .msg.bot .bubble.thinking .dots i:nth-child(3) { animation-delay: 0.36s; }
+@keyframes hc-dot {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30%           { opacity: 1;    transform: translateY(-2px); }
+}
 .assistant-panel form {
   display: flex;
   gap: 0.4rem;
