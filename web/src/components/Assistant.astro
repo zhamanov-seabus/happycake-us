@@ -28,6 +28,18 @@ const wrapperUrl = import.meta.env.PUBLIC_WRAPPER_URL ?? 'http://localhost:8000'
   const input = document.getElementById('assistant-input');
   const messages = document.getElementById('assistant-messages');
 
+  // Stable per-browser visitor id so the wrapper can recognise returning
+  // customers across page reloads. localStorage is fine for a same-origin
+  // first-party site; the id is opaque and carries no PII.
+  let visitorId = null;
+  try {
+    visitorId = localStorage.getItem('hc-visitor-id');
+    if (!visitorId) {
+      visitorId = 'web-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+      localStorage.setItem('hc-visitor-id', visitorId);
+    }
+  } catch (e) { /* private mode etc — anonymous, no recall */ }
+
   fab.addEventListener('click', () => panel.classList.toggle('open'));
 
   function addMessage(role, text) {
@@ -112,7 +124,7 @@ const wrapperUrl = import.meta.env.PUBLIC_WRAPPER_URL ?? 'http://localhost:8000'
       const r = await fetch(wrapperUrl + '/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: text, visitor_id: visitorId }),
       });
       const data = await r.json();
       thinking.stop();
