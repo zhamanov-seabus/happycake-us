@@ -1,0 +1,159 @@
+---
+import { getCatalog } from '../lib/catalog';
+
+const b = getCatalog().business;
+---
+<section class="section" id="findus" data-screen-label="Find Us">
+  <div class="wrap">
+    <div class="findus">
+      <div class="findus-info">
+        <span class="eyebrow">Find us</span>
+        <h2>{b.location.city},<br/><span class="serif-italic">on the south side.</span></h2>
+
+        <div class="address-block">
+          <div class="label">Address</div>
+          <a class="val" href="https://maps.google.com/?q=Sugar+Land+TX" target="_blank" rel="noopener">
+            HappyCake Bakery<br/>
+            {b.location.city}, {b.location.state}
+          </a>
+        </div>
+
+        <div class="address-block">
+          <div class="label">Hours</div>
+          <table class="hours">
+            <tbody>
+              <tr><th scope="row">Mon – Thu</th><td>{b.hours.mon}</td></tr>
+              <tr><th scope="row">Fri</th><td>{b.hours.fri}</td></tr>
+              <tr><th scope="row">Sat</th><td>{b.hours.sat}</td></tr>
+              <tr><th scope="row">Sun</th><td>{b.hours.sun}</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="findus-actions">
+          <a class="btn btn-primary" href="https://wa.me/" target="_blank" rel="noopener">
+            <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9s-.5-.1-.6.1c-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.2-.5.1-.2 0-.4 0-.5s-.6-1.5-.9-2c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.4s-.9.9-.9 2.2.9 2.5 1 2.7c.1.2 1.8 2.8 4.5 3.9 2.2.9 2.7.7 3.2.7s1.7-.7 1.9-1.4c.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.3 5L2 22l5.1-1.3c1.4.8 3.1 1.2 4.9 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg>
+            Message us on WhatsApp
+          </a>
+        </div>
+      </div>
+
+      <div class="map" aria-label="Map of HappyCake bakery in Sugar Land">
+        <div class="map-pin">
+          <div class="pin-dot"><span class="pin-pulse"></span></div>
+          <div class="map-label">HappyCake · {b.location.city}, {b.location.state}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style is:global>
+  .findus {
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: clamp(28px, 5vw, 56px);
+    align-items: stretch;
+  }
+  @media (max-width: 880px) { .findus { grid-template-columns: 1fr; } }
+  .findus-info h2 {
+    font-size: clamp(28px, 3.6vw, 42px);
+    line-height: 1.05;
+    margin-bottom: 24px;
+  }
+  .address-block { margin-bottom: 28px; }
+  .address-block .label {
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--cocoa-soft); margin-bottom: 6px;
+  }
+  .address-block .val {
+    font-family: var(--serif);
+    font-size: 22px;
+    line-height: 1.3;
+  }
+  .address-block a.val:hover { color: var(--honey-deep); }
+
+  .hours {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 28px;
+  }
+  .hours th, .hours td {
+    text-align: left;
+    padding: 11px 0;
+    font-size: 15px;
+    border-bottom: 1px solid var(--cocoa-line);
+    font-weight: 400;
+  }
+  .hours th { font-weight: 500; color: var(--cocoa); }
+  .hours td { color: var(--cocoa-soft); font-variant-numeric: tabular-nums; }
+  .hours tr.today th, .hours tr.today td {
+    color: var(--honey-deep);
+    font-weight: 500;
+  }
+  .hours tr.today th::after {
+    content: " · today";
+    color: var(--cocoa-soft);
+    font-weight: 400;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+  }
+
+  .findus-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .map {
+    border-radius: var(--radius);
+    overflow: hidden;
+    min-height: 380px;
+    position: relative;
+    background:
+      repeating-linear-gradient(
+        135deg,
+        var(--cream-2) 0 14px,
+        #EFE5D2 14px 16px
+      );
+    border: 1px solid var(--cocoa-line);
+  }
+  .map-pin {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -100%);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .pin-dot {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--honey);
+    border: 3px solid #fff;
+    box-shadow: var(--shadow);
+    position: relative;
+  }
+  .pin-dot::after {
+    content: ""; position: absolute;
+    top: 100%; left: 50%; transform: translateX(-50%) translateY(-3px);
+    width: 0; height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid var(--honey);
+  }
+  .pin-pulse {
+    position: absolute;
+    inset: -10px;
+    border-radius: 50%;
+    border: 2px solid var(--honey);
+    opacity: 0.5;
+    animation: pulse 2.4s ease-out infinite;
+  }
+  @keyframes pulse {
+    0% { transform: scale(0.6); opacity: 0.6; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+  .map-label {
+    background: #fff;
+    padding: 8px 14px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+    box-shadow: var(--shadow-sm);
+    white-space: nowrap;
+  }
+</style>

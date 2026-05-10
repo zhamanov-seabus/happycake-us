@@ -60,43 +60,108 @@ const localBusiness = {
     <link rel="icon" type="image/png" href={withBase('/images/logo.png')} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <script type="application/ld+json" set:html={JSON.stringify(localBusiness)} />
   </head>
   <body>
-    <header class="site">
-      <div class="bar">
-        <a href={withBase('/')} class="brand">
-          <img src={withBase('/images/logo.png')} alt="HappyCake logo" />
-          <span class="name">HappyCake</span>
+    <header class="nav" id="nav">
+      <div class="nav-inner">
+        <a href={withBase('/')} class="wordmark" aria-label="HappyCake home">
+          <span class="wordmark-mark" aria-hidden="true"></span>
+          <span>HappyCake</span>
         </a>
-        <nav>
+        <nav class="nav-links" aria-label="Primary">
           <a href={withBase('/catalog/')}>Catalog</a>
           <a href={withBase('/custom/')}>Custom</a>
           <a href={withBase('/order-status/')}>Status</a>
           <a href={withBase('/policies/')}>Policies</a>
           <a href={withBase('/about/')}>About</a>
         </nav>
+        <a class="btn btn-primary btn-sm nav-cta-desktop" href="https://wa.me/" target="_blank" rel="noopener">
+          <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9s-.5-.1-.6.1c-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.2-.5.1-.2 0-.4 0-.5s-.6-1.5-.9-2c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.4s-.9.9-.9 2.2.9 2.5 1 2.7c.1.2 1.8 2.8 4.5 3.9 2.2.9 2.7.7 3.2.7s1.7-.7 1.9-1.4c.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.3 5L2 22l5.1-1.3c1.4.8 3.1 1.2 4.9 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg>
+          Order on WhatsApp
+        </a>
+        <button class="nav-mobile-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M4 7h16M4 12h16M4 17h16"/>
+          </svg>
+        </button>
       </div>
     </header>
+    <div class="mobile-menu" id="mobileMenu">
+      <a href={withBase('/catalog/')}>Catalog</a>
+      <a href={withBase('/custom/')}>Custom</a>
+      <a href={withBase('/order-status/')}>Status</a>
+      <a href={withBase('/policies/')}>Policies</a>
+      <a href={withBase('/about/')}>About</a>
+      <a class="btn btn-primary" href="https://wa.me/" target="_blank" rel="noopener">
+        <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9s-.5-.1-.6.1c-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.2-.5.1-.2 0-.4 0-.5s-.6-1.5-.9-2c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.4s-.9.9-.9 2.2.9 2.5 1 2.7c.1.2 1.8 2.8 4.5 3.9 2.2.9 2.7.7 3.2.7s1.7-.7 1.9-1.4c.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.3 5L2 22l5.1-1.3c1.4.8 3.1 1.2 4.9 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg>
+        Order on WhatsApp
+      </a>
+    </div>
     <main>
       <slot />
     </main>
-    <footer class="site">
-      <div class="container">
-        <div>
-          <strong>HappyCake</strong> — {b.location.city}, {b.location.state}.<br />
-          {b.tagline}
+    <footer class="footer">
+      <div class="wrap">
+        <div class="footer-top">
+          <div class="footer-col">
+            <a href={withBase('/')} class="wordmark"><span class="wordmark-mark"></span><span>HappyCake</span></a>
+            <p>The original taste of happiness. Hand-built cakes, baked the way they used to be — in Sugar Land, Texas.</p>
+            <a href="https://instagram.com/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
+              @happycake
+            </a>
+          </div>
+          <div class="footer-col">
+            <h4>Cakes</h4>
+            <a href={withBase('/catalog/')}>Catalog</a>
+            <a href={withBase('/custom/')}>Custom orders</a>
+          </div>
+          <div class="footer-col">
+            <h4>Customers</h4>
+            <a href={withBase('/order-status/')}>Order status</a>
+            <a href={withBase('/policies/')}>Policies & FAQ</a>
+            <a href={withBase('/about/')}>About</a>
+          </div>
+          <div class="footer-col">
+            <h4>Visit</h4>
+            <a href="#findus">Hours &amp; address</a>
+            <a href="https://wa.me/" target="_blank" rel="noopener">WhatsApp</a>
+          </div>
         </div>
-        <div class="hours">
-          <strong>Open today</strong><br />
-          Mon–Thu {b.hours.mon} · Fri {b.hours.fri} · Sat {b.hours.sat} · Sun {b.hours.sun}
-        </div>
-        <div>
-          {b.closing_pattern}
+        <div class="footer-bottom">
+          <span>© 2026 HappyCake US — {b.location.city}, {b.location.state}.</span>
+          <span>{b.tagline}</span>
         </div>
       </div>
     </footer>
     <Assistant />
+    <script is:inline>
+      // Sticky-nav scrolled state + mobile menu toggle.
+      (() => {
+        const nav = document.getElementById('nav');
+        const onScroll = () => nav && nav.classList.toggle('is-scrolled', window.scrollY > 8);
+        onScroll();
+        window.addEventListener('scroll', onScroll, { passive: true });
+
+        const t = document.getElementById('navToggle');
+        const m = document.getElementById('mobileMenu');
+        t?.addEventListener('click', () => {
+          const open = m.classList.toggle('open');
+          t.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        m?.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+          m.classList.remove('open');
+          t?.setAttribute('aria-expanded', 'false');
+        }));
+
+        // Highlight today's row on the Find-us hours table if present.
+        const todayIdx = new Date().getDay();
+        const rowMap = { 1:0, 2:0, 3:0, 4:0, 5:1, 6:2, 0:3 };
+        const rows = document.querySelectorAll('.hours tbody tr');
+        if (rows[rowMap[todayIdx]]) rows[rowMap[todayIdx]].classList.add('today');
+      })();
+    </script>
   </body>
 </html>

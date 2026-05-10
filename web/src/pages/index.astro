@@ -1,160 +1,154 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { getCatalog, priceLabel } from '../lib/catalog';
+import { getCatalog, type Product } from '../lib/catalog';
 import { withBase } from '../lib/url';
-import { getCapacity, getInventory } from '../lib/sandbox';
-import { readFileSync, existsSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import Hero from '../components/Hero.astro';
+import Divider from '../components/Divider.astro';
+import CatalogCard from '../components/CatalogCard.astro';
+import UseCaseTile from '../components/UseCaseTile.astro';
+import TestimonialCard from '../components/TestimonialCard.astro';
+import OfferCard from '../components/OfferCard.astro';
+import PromiseSection from '../components/PromiseSection.astro';
+import FindUs from '../components/FindUs.astro';
 
 const catalog = getCatalog();
-const featured = catalog.products.filter(p => p.tags.includes('classic') || p.tags.includes('signature'));
 
-// Live operational state from sandbox MCP (fetched at build time).
-const [capacity, inventory] = await Promise.all([getCapacity(), getInventory()]);
-const inventoryByVar = new Map(inventory.map(i => [i.variationId, i]));
+// Pick the three "today on the counter" cakes by slug from the catalog.
+// Order matters — design shows: honey slice · whole honey · pistachio roll.
+const featuredSlugs = ['honey-cake-slice', 'whole-honey-cake', 'pistachio-roll'];
+const featured: Product[] = featuredSlugs
+  .map(slug => catalog.products.find(p => p.slug === slug))
+  .filter((p): p is Product => Boolean(p));
 
-// Load reviews if scripts/pull-reviews.py has been run.
-const reviewsPath = resolve(dirname(fileURLToPath(import.meta.url)), '../../../data/reviews.json');
-type Review = { id: string; author: string; rating: number; text: string; date: string };
-type ReviewsFile = { fetchedAt: string; averageRating: number; totalCount: number; reviews: Review[] };
-const reviewsData: ReviewsFile | null = existsSync(reviewsPath)
-  ? JSON.parse(readFileSync(reviewsPath, 'utf-8'))
-  : null;
-const featuredReviews = (reviewsData?.reviews ?? []).filter(r => r.rating >= 4).slice(0, 3);
-
-const aggregateRating = reviewsData && reviewsData.totalCount > 0 ? {
-  '@context': 'https://schema.org',
-  '@type': 'AggregateRating',
-  itemReviewed: { '@type': 'Bakery', name: 'HappyCake' },
-  ratingValue: reviewsData.averageRating,
-  reviewCount: reviewsData.totalCount,
-} : null;
+// Per-card meta overrides to match the design copy.
+const metaOverrides: Record<string, string> = {
+  'honey-cake-slice': '150 g · single serving',
+  'whole-honey-cake': '1.2 kg · serves 8–10',
+  'pistachio-roll':   '180 g · single serving',
+};
 ---
-<Layout title="HappyCake — homemade cakes in Sugar Land">
-  <section class="container hero">
-    <div class="copy">
-      <h1>It's just like homemade.</h1>
-      <p class="lead">HappyCake makes the kind of cakes you remember. Tender layers, real cream, baked in our Sugar Land kitchen and ready by closing time.</p>
-      {capacity && (
-        <p class="capacity-badge" title="Live from the kitchen">
-          {capacity.remainingCapacityMinutes >= 60 ? '🟢' : capacity.remainingCapacityMinutes > 0 ? '🟡' : '🔴'}
-          &nbsp;Today: <strong>{capacity.remainingCapacityMinutes}</strong> min of capacity left ·
-          {capacity.queuedTickets} queued · default lead {capacity.defaultLeadTimeMinutes} min
-        </p>
-      )}
-      <p>
-        <a href={withBase('/catalog/')} class="cta-link" style="background:var(--happy-blue);color:white;padding:0.7rem 1.4rem;border-radius:8px;text-decoration:none;font-weight:500;display:inline-block;">See today's cakes</a>
-      </p>
-    </div>
-    <img src={withBase('/images/happy-cake-hero-01.webp')} alt="A whole honey cake on the counter at HappyCake Sugar Land." />
-  </section>
+<Layout
+  title="HappyCake — The original taste of happiness"
+  description="HappyCake is a family bakery in Sugar Land, Texas. Hand-built traditional cakes — pick up today, or order ahead."
+  ogImage="/images/happy-cake-hero-01.webp"
+>
+  <Hero />
 
-  <section class="container">
-    <h2>Today's classics</h2>
-    <div class="grid">
-      {featured.map(p => {
-        const inv = inventoryByVar.get(p.variation_id);
-        return (
-          <article class="card">
-            <a href={withBase(`/product/${p.slug}/`)}>
-              <img src={withBase(p.photo)} alt={p.name} loading="lazy" />
-            </a>
-            <div class="body">
-              <h3 set:html={p.display_name} />
-              {inv && (
-                <span class={`stock-pill ${inv.inStock ? 'in' : 'out'}`}>
-                  {inv.inStock ? 'In stock today' : 'Sold out today'}
-                </span>
-              )}
-              <p>{p.description}</p>
-              <div class="meta">
-                <span class="price">{priceLabel(p)}</span>
-                <span class="weight">{p.weight}</span>
-              </div>
-              <a href={withBase(`/product/${p.slug}/`)} class="cta">View</a>
-            </div>
-          </article>
-        );
-      })}
-    </div>
-  </section>
+  <Divider />
 
-  {featuredReviews.length > 0 && (
-    <section class="container reviews">
-      <h2>What guests say</h2>
-      {reviewsData && (
-        <p class="rating-line">
-          <span class="stars" aria-label={`${reviewsData.averageRating} out of 5`}>{'★'.repeat(Math.round(reviewsData.averageRating))}{'☆'.repeat(5 - Math.round(reviewsData.averageRating))}</span>
-          <span> {reviewsData.averageRating.toFixed(1)} from {reviewsData.totalCount} reviews</span>
-        </p>
-      )}
-      <div class="review-grid">
-        {featuredReviews.map(r => (
-          <blockquote class="review-card">
-            <div class="stars">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</div>
-            <p>"{r.text}"</p>
-            <footer>— {r.author}</footer>
-          </blockquote>
+  <!-- Today on the counter -->
+  <section class="section" id="catalog" data-screen-label="Catalog Strip">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Today on the counter</span>
+          <h2>Fresh-baked this morning,<br/><span class="serif-italic">ready when you are.</span></h2>
+        </div>
+        <a class="see-all" href={withBase('/catalog/')}>See all cakes →</a>
+      </div>
+
+      <div class="product-grid">
+        {featured.map(p => (
+          <CatalogCard product={p} metaText={metaOverrides[p.slug]} />
         ))}
       </div>
-      {aggregateRating && <script type="application/ld+json" set:html={JSON.stringify(aggregateRating)} />}
-    </section>
-  )}
-
-  <section class="container">
-    <h2>How ordering works</h2>
-    <ol>
-      <li>Pick a cake on the catalog or send us a message.</li>
-      <li>Tell us the date and pickup time. We confirm within the hour.</li>
-      <li>Whole cakes need 45 minutes' notice; catering 90 minutes; custom 3 hours and a quick chat.</li>
-      <li>Pickup at the Sugar Land kitchen, or ask about local delivery.</li>
-    </ol>
-    <p>{catalog.business.closing_pattern}</p>
-  </section>
-
-  <section class="container lead-section">
-    <div class="lead-card">
-      <h2>Friday's bake-batch — first dibs</h2>
-      <p>We bake the freshest assortment on Fridays. Drop your email and we'll send you a heads-up before the batch hits the counter.</p>
-      <form id="lead-form" class="lead-form" autocomplete="off">
-        <input id="lead-email" name="email" type="email" required placeholder="you@example.com" />
-        <button type="submit" class="order-button">Get the heads-up</button>
-      </form>
-      <p id="lead-status" class="lead-status" aria-live="polite"></p>
     </div>
   </section>
 
-  <script is:inline define:vars={{ wrapperUrl: import.meta.env.PUBLIC_WRAPPER_URL ?? 'http://localhost:8000' }}>
-    const form = document.getElementById('lead-form');
-    const status = document.getElementById('lead-status');
-    if (form) {
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('lead-email').value.trim();
-        if (!email) return;
-        status.textContent = 'Saving…';
-        status.className = 'lead-status';
-        try {
-          const r = await fetch(wrapperUrl + '/lead', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, intent: 'friday-batch' }),
-          });
-          const j = await r.json();
-          if (j.ok) {
-            status.textContent = j.message || 'Got it.';
-            status.className = 'lead-status ok';
-            form.reset();
-          } else {
-            status.textContent = j.error || 'Could not save just now — try again in a moment.';
-            status.className = 'lead-status err';
-          }
-        } catch (err) {
-          status.textContent = 'Could not reach the system. Try again in a moment.';
-          status.className = 'lead-status err';
-        }
-      });
-    }
-  </script>
+  <!-- Use cases -->
+  <section class="section" style="padding-top: 0;" data-screen-label="Use Cases">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">For the moments that matter</span>
+          <h2>Birthdays, Mondays,<br/><span class="serif-italic">and everything in between.</span></h2>
+        </div>
+      </div>
+
+      <div class="usecase-grid">
+        <UseCaseTile
+          href="/custom/"
+          photo="/images/happy-cake-product-04.webp"
+          alt="A birthday cake topped with candles and berries"
+          title="Birthdays"
+          body="Whole cakes for the people you love most. Order Friday for Saturday — we've got you."
+          cta="Custom orders"
+        />
+        <UseCaseTile
+          href="/catalog/"
+          photo="/images/happy-cake-product-05.webp"
+          alt="An assortment of office-box cake slices in paper liners"
+          title="The office"
+          body="Sliced and boxed for meetings, client visits, and Friday afternoons. Standing weekly orders welcome."
+          cta="Office boxes"
+        />
+        <UseCaseTile
+          href="/catalog/"
+          photo="/images/happy-cake-hero-02.webp"
+          alt="A slice of cake with a cup of tea on a wooden table"
+          title="Wednesday dinner"
+          body="Because you don't need a reason. Pop in on the way home — slices ready at the counter all day."
+          cta="Today's catalog"
+        />
+      </div>
+    </div>
+  </section>
+
+  <Divider flip />
+
+  <PromiseSection />
+
+  <!-- Testimonials -->
+  <section class="section testimonials-bg" data-screen-label="Testimonials">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Why people come back</span>
+          <h2>Three customers,<br/><span class="serif-italic">in their own words.</span></h2>
+        </div>
+      </div>
+      <div class="testimonial-grid">
+        <TestimonialCard quote="Best honey cake in the area. Came for a birthday, leaving as a regular." author="M. R." />
+        <TestimonialCard quote="We've been ordering from HappyCake for our office birthdays for months. Never disappointed." author="D. N." />
+        <TestimonialCard quote="Lovely pistachio roll. Wish you delivered." author="J. S." />
+      </div>
+    </div>
+  </section>
+
+  <!-- Offers -->
+  <section class="section" data-screen-label="Offers">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Offers this month</span>
+          <h2>Small things <span class="serif-italic">we do for regulars.</span></h2>
+        </div>
+      </div>
+      <div class="offers-grid">
+        <OfferCard
+          tag="Walk-in"
+          title="Free slice with a Google review"
+          body="Show us your review at the counter and pick a slice on the house. One per customer, while we're open."
+          href="/policies/"
+          cta="Get details"
+        />
+        <OfferCard
+          tag="For the office"
+          title="Weekly office box · $120 / week"
+          body="An assortment for 10–12, delivered to your office every Friday morning. Cancel any week, no contract."
+          href="/catalog/"
+          cta="Start a standing order"
+        />
+        <OfferCard
+          tag="For regulars"
+          title="$5 off via WhatsApp"
+          body="Order through WhatsApp on your second visit and we'll knock $5 off. Because coming back deserves a thank-you."
+          href="https://wa.me/"
+          cta="Message us"
+        />
+      </div>
+    </div>
+  </section>
+
+  <FindUs />
 </Layout>

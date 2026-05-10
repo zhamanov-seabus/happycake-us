@@ -1,0 +1,65 @@
+---
+interface Props {
+  quote: string;
+  author: string;
+}
+const { quote, author } = Astro.props;
+---
+<figure class="testimonial">
+  <div class="quote-mark" aria-hidden="true">“</div>
+  <blockquote>{quote}</blockquote>
+  <cite>{author}</cite>
+</figure>
+
+<style is:global>
+  .testimonials-bg { background: var(--cream-2); }
+  .testimonial-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+  }
+  @media (max-width: 880px) { .testimonial-grid { grid-template-columns: 1fr; } }
+
+  .testimonial {
+    background: #fff;
+    border-radius: var(--radius);
+    padding: 30px 28px 26px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .quote-mark {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 64px;
+    line-height: 0.6;
+    color: var(--honey);
+    margin-bottom: 6px;
+    height: 28px;
+  }
+  .testimonial blockquote {
+    font-family: var(--serif);
+    font-size: 20px;
+    line-height: 1.35;
+    font-weight: 400;
+    letter-spacing: -0.005em;
+    margin: 0 0 22px;
+    color: var(--cocoa);
+    text-wrap: pretty;
+  }
+  .testimonial cite {
+    font-style: normal;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--cocoa-soft);
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .testimonial cite::before {
+    content: ""; display: block; width: 18px; height: 1px; background: var(--cocoa-line);
+  }
+</style>

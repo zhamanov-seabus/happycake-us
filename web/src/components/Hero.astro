@@ -1,0 +1,123 @@
+---
+import { withBase } from '../lib/url';
+
+interface Props {
+  /** Path under /images/, e.g. /images/happy-cake-hero-01.webp */
+  photo?: string;
+  alt?: string;
+  eyebrow?: string;
+  metaText?: string;
+}
+
+const {
+  photo = '/images/happy-cake-hero-01.webp',
+  alt = 'Honey cake fresh from the HappyCake kitchen',
+  eyebrow = 'Sugar Land · Family bakery',
+  metaText = 'Open today · Walk-ins welcome',
+} = Astro.props;
+---
+<section class="hero" data-screen-label="Hero">
+  <img class="hero-photo" src={withBase(photo)} alt={alt} />
+
+  <div class="hero-meta" aria-live="polite">
+    <span class="dot" aria-hidden="true"></span>
+    <span>{metaText}</span>
+  </div>
+
+  <div class="hero-inner wrap">
+    <span class="hero-eyebrow">{eyebrow}</span>
+    <h1>The original taste of <em>happiness.</em></h1>
+    <p class="lead">Hand-built cakes in Sugar Land. Pick up today, or order ahead for the moments that matter.</p>
+    <div class="hero-ctas">
+      <a class="btn btn-primary" href="#catalog">See today's cakes
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+      <a class="btn btn-on-photo" href="https://wa.me/" target="_blank" rel="noopener">
+        <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9s-.5-.1-.6.1c-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.2-.5.1-.2 0-.4 0-.5s-.6-1.5-.9-2c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.4s-.9.9-.9 2.2.9 2.5 1 2.7c.1.2 1.8 2.8 4.5 3.9 2.2.9 2.7.7 3.2.7s1.7-.7 1.9-1.4c.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.3 5L2 22l5.1-1.3c1.4.8 3.1 1.2 4.9 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg>
+        Message us on WhatsApp
+      </a>
+    </div>
+  </div>
+</section>
+
+<style is:global>
+  .hero {
+    position: relative;
+    min-height: clamp(560px, 78vh, 760px);
+    overflow: hidden;
+    isolation: isolate;
+    display: flex;
+    align-items: end;
+    margin: 0;
+  }
+  .hero-photo {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    z-index: -2;
+  }
+  .hero::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(58,42,31,0.05) 0%, rgba(58,42,31,0) 30%, rgba(58,42,31,0.55) 100%);
+    z-index: -1;
+  }
+  .hero-inner {
+    width: 100%;
+    padding-top: 64px !important;
+    padding-bottom: 64px !important;
+    color: #fff;
+  }
+  .hero-eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    opacity: 0.9;
+    margin-bottom: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    color: #fff;
+  }
+  .hero-eyebrow::before {
+    content: ""; display: block; width: 28px; height: 1px; background: rgba(255,255,255,0.8);
+  }
+  .hero h1 {
+    color: #fff;
+    font-size: clamp(40px, 6.5vw, 84px);
+    line-height: 1.0;
+    letter-spacing: -0.025em;
+    font-weight: 400;
+    max-width: 14ch;
+    margin-bottom: 22px;
+  }
+  .hero h1 em {
+    font-style: italic;
+    font-weight: 400;
+    color: #F6E0BD;
+  }
+  .hero p.lead {
+    font-size: clamp(16px, 1.4vw, 19px);
+    max-width: 50ch;
+    color: rgba(255,255,255,0.9);
+    margin: 0 0 32px;
+    line-height: 1.5;
+  }
+  .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+
+  .hero-meta {
+    position: absolute;
+    top: 28px; right: var(--gutter);
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.92);
+    color: var(--cocoa);
+    padding: 8px 14px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(4px);
+    z-index: 1;
+  }
+  .hero-meta .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sage-deep); box-shadow: 0 0 0 4px rgba(141,161,127,0.18); }
+  @media (max-width: 640px) { .hero-meta { display: none; } }
+</style>

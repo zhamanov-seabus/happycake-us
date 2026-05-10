@@ -1,0 +1,40 @@
+---
+interface Props {
+  /** Mirror the SVG horizontally for visual variety. */
+  flip?: boolean;
+}
+const { flip = false } = Astro.props;
+const className = flip ? 'page-divider flip' : 'page-divider';
+---
+<div class={className} aria-hidden="true">
+  {flip ? (
+    <svg viewBox="0 0 820 60" preserveAspectRatio="none">
+      <path d="M5 30 C 70 46, 130 18, 200 32 S 320 50, 380 28 S 500 12, 560 32 S 680 48, 740 26 S 800 36, 815 30"
+            fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+      <circle cx="100" cy="38" r="1.4" fill="currentColor"/>
+      <circle cx="380" cy="28" r="1.4" fill="currentColor"/>
+      <circle cx="620" cy="40" r="1.4" fill="currentColor"/>
+    </svg>
+  ) : (
+    <svg viewBox="0 0 820 60" preserveAspectRatio="none">
+      <path d="M5 32 C 60 18, 110 44, 170 30 S 280 16, 340 34 S 460 50, 520 28 S 640 14, 700 32 S 790 44, 815 28"
+            fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+      <circle cx="170" cy="30" r="1.4" fill="currentColor"/>
+      <circle cx="410" cy="42" r="1.4" fill="currentColor"/>
+      <circle cx="650" cy="22" r="1.4" fill="currentColor"/>
+      <path d="M408 38 q2 -6 6 0 q-3 4 -6 0z" fill="none" stroke="currentColor" stroke-width="0.9" />
+    </svg>
+  )}
+</div>
+
+<style>
+  .page-divider {
+    display: block;
+    margin: 0 auto;
+    width: min(820px, 86%);
+    color: var(--cocoa);
+    opacity: .42;
+  }
+  .page-divider svg { width: 100%; height: auto; display: block; }
+  .page-divider.flip svg { transform: scaleX(-1); }
+</style>

@@ -1,0 +1,148 @@
+---
+import { withBase } from '../lib/url';
+import { priceLabel, type Product } from '../lib/catalog';
+
+interface Props {
+  product: Product;
+  /** override the meta line, e.g. "1.2 kg · serves 8–10". Falls back to weight + tag */
+  metaText?: string;
+  /** label override for the chip; default derives from lead_time_minutes */
+  chipLabel?: string;
+}
+
+const { product, metaText, chipLabel } = Astro.props;
+const p = product;
+
+const cakePrefix = p.display_name.startsWith('cake "') ? 'cake' : null;
+const titleAfterPrefix = cakePrefix ? p.display_name.slice('cake'.length).trimStart() : p.display_name;
+
+// Sensible default chip label based on lead time
+const chip = chipLabel ?? (
+  p.lead_time_minutes && p.lead_time_minutes >= 45
+    ? `Order ahead · ${p.lead_time_minutes} min`
+    : 'Walk-in'
+);
+const chipClass = p.lead_time_minutes && p.lead_time_minutes >= 45 ? 'lead-time-chip amber' : 'lead-time-chip';
+
+const meta = metaText ?? p.weight;
+
+// Per-product Product+Offer JSON-LD lives next to the card so it ships with the homepage strip.
+const siteOrigin = (Astro.site?.toString().replace(/\/$/, '') ?? '');
+const productJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name: p.name,
+  description: p.description,
+  image: `${siteOrigin}${withBase(p.photo)}`,
+  brand: { '@type': 'Brand', name: 'HappyCake' },
+  category: p.category,
+  weight: p.weight,
+  offers: {
+    '@type': 'Offer',
+    priceCurrency: 'USD',
+    price: p.price_usd.toFixed(2),
+    availability: 'https://schema.org/InStock',
+    url: `${siteOrigin}${withBase('/product/' + p.slug + '/')}`,
+    seller: { '@type': 'Bakery', name: 'HappyCake' },
+  },
+};
+---
+<article class="product-card">
+  <a class="product-photo" href={withBase(`/product/${p.slug}/`)} aria-label={`Open ${p.name} product page`}>
+    <img src={withBase(p.photo)} alt={p.name} loading="lazy" />
+  </a>
+  <div class="product-body">
+    <h3 class="product-name">
+      {cakePrefix && <span class="cake-prefix">cake</span>}
+      {titleAfterPrefix}
+    </h3>
+    <div class="product-meta">
+      <span>{meta}</span>
+    </div>
+    <span class={chipClass}>{chip}</span>
+    <div class="product-foot">
+      <span class="product-price">{priceLabel(p)}</span>
+      <a class="btn btn-ghost btn-sm" href={withBase(`/product/${p.slug}/`)}>View</a>
+    </div>
+  </div>
+  <script type="application/ld+json" set:html={JSON.stringify(productJsonLd)} />
+</article>
+
+<style is:global>
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+  }
+  @media (max-width: 880px) { .product-grid { grid-template-columns: 1fr; gap: 20px; } }
+
+  .product-card {
+    background: #fff;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    transition: transform .25s ease, box-shadow .25s ease;
+    border: 1px solid rgba(58,42,31,0.06);
+  }
+  .product-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+
+  .product-photo {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    background: var(--cream-2);
+    overflow: hidden;
+    display: block;
+  }
+  .product-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+  .product-body { padding: 22px 22px 24px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .product-name {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .product-name .cake-prefix {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--cocoa-soft);
+    font-size: 17px;
+    margin-right: 6px;
+  }
+  .product-meta {
+    font-size: 13.5px;
+    color: var(--cocoa-soft);
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-top: 2px;
+  }
+  .lead-time-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 14px;
+    align-self: flex-start;
+    padding: 5px 11px;
+    border-radius: var(--radius-pill);
+    font-size: 12.5px;
+    font-weight: 500;
+    background: rgba(181,196,168,0.28);
+    color: #4F6244;
+  }
+  .lead-time-chip.amber { background: rgba(216,155,74,0.18); color: var(--honey-deep); }
+  .lead-time-chip::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.7;
+  }
+  .product-foot {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--cocoa-line);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .product-price {
+    font-family: var(--serif);
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--cocoa);
+  }
+</style>

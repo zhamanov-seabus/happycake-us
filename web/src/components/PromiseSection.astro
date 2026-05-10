@@ -1,0 +1,55 @@
+---
+import { withBase } from '../lib/url';
+---
+<section class="section" data-screen-label="Promise">
+  <div class="wrap">
+    <div class="promise">
+      <div class="promise-portrait">
+        <img src={withBase('/images/happy-cake-hero-03.webp')} alt="A baker arranging a cake in the HappyCake kitchen" loading="lazy" />
+      </div>
+      <div>
+        <span class="eyebrow">Our promise</span>
+        <h2>It started with a phrase: <span class="serif-italic">"It's just like homemade."</span></h2>
+        <p>We started baking cakes — as if for ourselves. The recipes are the ones our grandmothers handed down: honey layers rested overnight, pistachio rolls wound by hand in the morning, butter weighed in grams, never grams-and-a-bit.</p>
+        <p>No flavor of the week. No marble countertops. Just real home baking, in a small kitchen on the south side of Sugar Land, by a family who has been doing it the same way for a long time.</p>
+        <div class="signature">— The HappyCake family</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style is:global>
+  .promise {
+    display: grid;
+    grid-template-columns: 5fr 6fr;
+    gap: clamp(28px, 5vw, 64px);
+    align-items: center;
+  }
+  @media (max-width: 880px) { .promise { grid-template-columns: 1fr; } }
+  .promise-portrait {
+    border-radius: var(--radius);
+    overflow: hidden;
+    aspect-ratio: 4/5;
+    background: var(--cream-2);
+  }
+  .promise-portrait img { width: 100%; height: 100%; object-fit: cover; }
+  .promise h2 {
+    font-size: clamp(28px, 3.6vw, 42px);
+    line-height: 1.05;
+    margin-bottom: 22px;
+  }
+  .promise p {
+    font-size: 17px;
+    color: var(--cocoa);
+    line-height: 1.65;
+    margin: 0 0 18px;
+    max-width: 52ch;
+  }
+  .signature {
+    margin-top: 18px;
+    font-family: var(--serif);
+    font-style: italic;
+    color: var(--cocoa-soft);
+    font-size: 16px;
+  }
+</style>

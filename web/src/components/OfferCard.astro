@@ -1,0 +1,75 @@
+---
+import { withBase } from '../lib/url';
+
+interface Props {
+  tag: string;
+  title: string;
+  body: string;
+  href: string;
+  cta: string;
+}
+const { tag, title, body, href, cta } = Astro.props;
+const isExternal = href.startsWith('http');
+const finalHref = isExternal ? href : withBase(href);
+const externalProps = isExternal ? { target: '_blank', rel: 'noopener' } : {};
+---
+<article class="offer">
+  <span class="offer-corner" aria-hidden="true"></span>
+  <span class="offer-tag">{tag}</span>
+  <h3>{title}</h3>
+  <p>{body}</p>
+  <a class="offer-action" href={finalHref} {...externalProps}>{cta}
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+  </a>
+</article>
+
+<style is:global>
+  .offers-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+  @media (max-width: 880px) { .offers-grid { grid-template-columns: 1fr; } }
+
+  .offer {
+    background: #fff;
+    border: 1px solid var(--cocoa-line);
+    border-radius: var(--radius);
+    padding: 24px 22px 22px;
+    display: flex; flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  .offer .offer-tag {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--honey-deep);
+    margin-bottom: 10px;
+  }
+  .offer h3 {
+    font-size: 22px;
+    margin-bottom: 8px;
+    line-height: 1.15;
+  }
+  .offer p {
+    margin: 0 0 16px;
+    font-size: 14.5px;
+    color: var(--cocoa-soft);
+    line-height: 1.5;
+  }
+  .offer .offer-action {
+    margin-top: auto;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--cocoa);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .offer-action svg { transition: transform .2s ease; }
+  .offer:hover .offer-action svg { transform: translateX(3px); }
+  .offer-corner {
+    position: absolute; top: 0; right: 0;
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, transparent 50%, rgba(216,155,74,0.18) 50%);
+  }
+</style>
