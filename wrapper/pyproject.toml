@@ -17,6 +17,9 @@ dependencies = [
   # so an evaluator clone has no external Postgres dependency.
   "fastembed>=0.4",
   "numpy>=1.26",
+  # Rate limiting on /chat and /franchise so a bored adversary can't burn
+  # Claude credits or DoS the FastAPI app.
+  "slowapi>=0.1.9",
 ]
 
 [build-system]
