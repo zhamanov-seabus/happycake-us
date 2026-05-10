@@ -19,8 +19,9 @@ log = logging.getLogger("happycake.app")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Wire the owner-decision callback before polling starts
+    # Wire the owner-decision + edit-message callbacks before polling starts
     owner_bot.register_decision_handler(agent.on_owner_decision)
+    owner_bot.register_edit_message_handler(agent.on_owner_edit_message)
     polling_task = None
     if TELEGRAM_BOT_TOKEN:
         try:

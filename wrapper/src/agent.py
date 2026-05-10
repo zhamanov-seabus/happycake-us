@@ -91,6 +91,16 @@ async def handle_customer_message(
     return decision
 
 
+async def on_owner_edit_message(order_id: str, text: str, handoff: dict[str, Any]) -> None:
+    """Owner typed a follow-up after Edit. Relay to customer on their channel
+    and publish to SSE/polling subscribers so the website widget shows it too."""
+    await _reply_to_customer(handoff, text)
+    await order_events.publish(order_id, {
+        "status": "edit_followup",
+        "message": text,
+    })
+
+
 async def on_owner_decision(order_id: str, verb: str, handoff: dict[str, Any]) -> None:
     """Owner pressed Approve/Edit/Reject. Drive side effects."""
     raw = handoff.get("raw_decision", {})

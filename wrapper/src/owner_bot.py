@@ -11,13 +11,17 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+import time
+
+from telegram import ForceReply, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     Application,
     ApplicationBuilder,
     CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
+    MessageHandler,
+    filters,
 )
 
 from . import evidence
@@ -27,8 +31,14 @@ log = logging.getLogger("happycake.owner_bot")
 
 # pending[order_id] = full handoff dict; resolved when the owner taps a button.
 _pending: dict[str, dict[str, Any]] = {}
+# After Edit: chat_id → {order_id, handoff, expires_at}. Next non-command text
+# message from that chat is forwarded to the customer on their channel.
+_pending_edits: dict[int, dict[str, Any]] = {}
+EDIT_TIMEOUT_SECONDS = 600
 # Callbacks fired when the owner approves/edits/rejects.
 _decision_handlers: list[Callable[[str, str, dict[str, Any]], Awaitable[None]]] = []
+# Callbacks fired when the owner sends a free-form edit message after tapping Edit.
+_edit_message_handlers: list[Callable[[str, str, dict[str, Any]], Awaitable[None]]] = []
 
 
 @dataclass
@@ -49,6 +59,17 @@ def register_decision_handler(fn: Callable[[str, str, dict[str, Any]], Awaitable
     fn signature: (order_id, decision: 'approve'|'edit'|'reject', handoff: dict) -> None
     """
     _decision_handlers.append(fn)
+
+
+def register_edit_message_handler(
+    fn: Callable[[str, str, dict[str, Any]], Awaitable[None]],
+) -> None:
+    """Register an async callback fired when the owner sends a free-form edit
+    message after tapping Edit.
+
+    fn signature: (order_id, message_text, handoff: dict) -> None
+    """
+    _edit_message_handlers.append(fn)
 
 
 def _format_card(h: Handoff) -> str:
@@ -89,6 +110,8 @@ def get_app() -> Application:
         _app.add_handler(CommandHandler("start", _on_start))
         _app.add_handler(CommandHandler("today", _on_today))
         _app.add_handler(CallbackQueryHandler(_on_callback, pattern=r"^order:"))
+        # Free-form text from the owner is treated as a follow-up after Edit.
+        _app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, _on_text))
     return _app
 
 
@@ -141,18 +164,78 @@ async def _on_callback(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
     _, verb, order_id = parts
     handoff = _pending.pop(order_id, None)
     if not handoff:
-        # Edit in plain text — q.message.text is already rendered, no HTML safe to re-parse.
         await q.edit_message_text(q.message.text + "\n\n· Already handled.")
         return
     icon = {"approve": "✅", "edit": "✏️", "reject": "❌"}.get(verb, "·")
     await q.edit_message_text(f"{q.message.text}\n\n{icon} {verb.capitalize()}ed")
     evidence.log("owner_decision", handoff["channel"], {"order_id": order_id, "decision": verb})
+
+    # If Edit, arm the edit-followup state for THIS chat. Next plain text
+    # from the owner gets forwarded to the customer.
+    if verb == "edit" and q.message and q.message.chat_id is not None:
+        _pending_edits[q.message.chat_id] = {
+            "order_id": order_id,
+            "handoff": handoff,
+            "expires_at": time.time() + EDIT_TIMEOUT_SECONDS,
+        }
+        try:
+            await q.message.reply_text(
+                f"✏️ Reply to this message with what to send the customer for "
+                f"<code>{order_id}</code>. I'll relay it on their channel. "
+                f"(Times out in 10 min.)",
+                parse_mode="HTML",
+                reply_markup=ForceReply(selective=True),
+            )
+        except Exception as e:
+            log.warning("edit follow-up prompt failed: %s", e)
+
     for fn in _decision_handlers:
         try:
             await fn(order_id, verb, handoff)
         except Exception as e:
             log.exception("decision handler raised: %s", e)
             evidence.log("error", "system", {"where": "owner_decision_handler", "error": str(e)})
+
+
+async def _on_text(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """Owner sent free-form text. If we just asked them for an edit follow-up
+    on this chat, forward it to the customer; otherwise ignore politely."""
+    if not update.message or not update.message.text:
+        return
+    chat_id = update.message.chat_id
+    state = _pending_edits.get(chat_id)
+    if not state or state.get("expires_at", 0) < time.time():
+        _pending_edits.pop(chat_id, None)
+        await update.message.reply_text(
+            "I only forward messages right after you tap ✏️ Edit on a card. "
+            "If you wanted to take an action, use /today to see pending orders."
+        )
+        return
+
+    order_id = state["order_id"]
+    handoff = state["handoff"]
+    text = update.message.text.strip()
+    # Clear state immediately to avoid double-forwards on retries.
+    _pending_edits.pop(chat_id, None)
+
+    evidence.log("owner_edit_message", handoff["channel"], {
+        "order_id": order_id,
+        "text_preview": text[:200],
+    })
+
+    # Acknowledge to the owner first.
+    await update.message.reply_text(
+        f"Sent to the customer on {handoff['channel']} for "
+        f"<code>{order_id}</code>.",
+        parse_mode="HTML",
+    )
+
+    for fn in _edit_message_handlers:
+        try:
+            await fn(order_id, text, handoff)
+        except Exception as e:
+            log.exception("edit message handler raised: %s", e)
+            evidence.log("error", "system", {"where": "owner_edit_handler", "error": str(e)})
 
 
 async def start_polling() -> None:
