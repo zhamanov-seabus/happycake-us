@@ -2,6 +2,19 @@
 
 This is the orchestration layer that ties claude_runner, mcp_client, and
 owner_bot together. Called from FastAPI route handlers.
+
+Two paths for an order_intent decision:
+
+1. **Auto-confirm** (preferred when feasible): the wrapper runs the same
+   stock / ingredient checks the owner-approval branch runs, creates the
+   Square order and kitchen ticket immediately, replaces `reply_text` with
+   a real confirmation, and sends the owner an FYI Telegram message
+   without approval buttons. The customer sees the confirmation in the
+   same chat turn they ordered in.
+
+2. **Owner card** (fallback): used when Claude flagged the order for
+   approval, the catalog requires it (custom cake), the same-day counter
+   is short, or the kitchen pantry can't cover the future-day bake.
 """
 from __future__ import annotations
 import secrets
@@ -46,8 +59,11 @@ async def handle_customer_message(
 
     Side effects:
       - Logs to evidence/log.jsonl
-      - For order_intent or escalate, sends a Telegram card to the owner
-      - Returns a dict the route can use to reply on the customer channel
+      - For an order_intent that passes stock/ingredient checks: creates
+        the Square order + kitchen ticket immediately, replaces
+        `reply_text` with the confirmation, sends an FYI to the owner.
+      - For everything else that needs human review: sends a blocking
+        approval card to the owner Telegram bot.
     """
     evidence.log("webhook_in", channel, {
         "customer_name": customer_name,
@@ -63,8 +79,30 @@ async def handle_customer_message(
     needs_approval = bool(decision.get("needs_owner_approval", False))
 
     order_id: str | None = None
-    if intent in ("order_intent", "complaint", "escalate") or needs_approval:
+
+    # --- Path 1: auto-confirm a clean order in this same turn ----------
+    if intent == "order_intent" and not needs_approval and decision.get("items"):
         order_id = f"hc_{secrets.token_hex(4)}"
+        auto = await _attempt_auto_confirm(
+            order_id=order_id,
+            decision=decision,
+            customer_name=customer_name,
+            customer_handle=customer_handle,
+            channel=channel,
+            thread_id=thread_id,
+            phone=phone,
+        )
+        if auto is not None:
+            decision["reply_text"] = auto["confirmation_text"]
+            decision["auto_confirmed"] = True
+            decision["square_order_id"] = auto["square_order_id"]
+            decision["order_id"] = order_id
+            return decision
+        # fall through to the owner-card path if auto-confirm couldn't fire
+
+    # --- Path 2: owner card (custom cake, ingredient short, complaint, escalate) ---
+    if intent in ("order_intent", "complaint", "escalate") or needs_approval:
+        order_id = order_id or f"hc_{secrets.token_hex(4)}"
         items_label = _format_items(decision.get("items"))
         handoff = owner_bot.Handoff(
             order_id=order_id,
@@ -89,6 +127,198 @@ async def handle_customer_message(
 
     decision["order_id"] = order_id
     return decision
+
+
+async def _attempt_auto_confirm(
+    *,
+    order_id: str,
+    decision: dict[str, Any],
+    customer_name: str,
+    customer_handle: str,
+    channel: str,
+    thread_id: str | None,
+    phone: str | None,
+) -> dict[str, Any] | None:
+    """Run the same stock + ingredient gates the owner-approve branch runs,
+    and if everything passes, commit the order to Square + kitchen now.
+
+    Returns a dict {square_order_id, confirmation_text} on success, or None
+    if the order needs a human (custom item, same-day stockout, ingredient
+    deficit, or any sandbox failure)."""
+    items = decision.get("items") or []
+    if not items:
+        return None
+
+    # Defense in depth: block any catalog item the brand marks as
+    # owner-approval-only (custom birthday cake, etc) — even if Claude
+    # forgot to set needs_owner_approval.
+    catalog_by_var = {p["variation_id"]: p for p in _load_catalog()["products"]}
+    for it in items:
+        prod = catalog_by_var.get(it.get("variation_id", ""))
+        if prod and prod.get("requires_owner_approval"):
+            return None
+
+    pickup_iso = decision.get("pickup_time_iso")
+    same_day = inventory.is_same_day(pickup_iso)
+
+    if same_day:
+        shortfalls = inventory.check_ready_stock(items)
+        if shortfalls:
+            evidence.log("auto_confirm_blocked", channel, {
+                "order_id": order_id,
+                "reason": "same_day_stockout",
+                "shortfalls": inventory.to_jsonable(shortfalls),
+            })
+            return None
+    else:
+        ingredient_short = inventory.check_ingredient_feasibility(items)
+        if ingredient_short:
+            evidence.log("auto_confirm_blocked", channel, {
+                "order_id": order_id,
+                "reason": "ingredient_short",
+                "shortfalls": inventory.to_jsonable(ingredient_short),
+            })
+            return None
+
+    # All gates green. Commit the order.
+    square_items = [
+        {
+            "variationId": it["variation_id"],
+            "quantity": it.get("quantity", 1),
+            **({"note": it["note"]} if it.get("note") else {}),
+        }
+        for it in items
+    ]
+    try:
+        order_resp = mcp_client.call("square_create_order", {
+            "items": square_items,
+            "source": channel,
+            "customerName": customer_name or "Friend",
+            "customerNote": decision.get("customer_note") or "",
+        })
+    except Exception as e:
+        evidence.log("error", "system", {"where": "auto_confirm_create_order", "error": str(e)})
+        return None
+
+    order_obj = (order_resp or {}).get("order") if isinstance(order_resp, dict) else None
+    square_order_id = (order_obj or {}).get("id")
+    if not square_order_id:
+        evidence.log("auto_confirm_blocked", channel, {
+            "order_id": order_id,
+            "reason": "no_square_order_id",
+            "resp": str(order_resp)[:300],
+        })
+        return None
+
+    # Future-day path: now that the order is real, draw down the pantry.
+    if not same_day:
+        needs = inventory.compute_ingredient_needs(items)
+        if needs:
+            try:
+                drawdown = inventory.decrement_ingredients(needs)
+                evidence.log("inventory_drawdown", channel, {
+                    "order_id": order_id,
+                    "square_order_id": square_order_id,
+                    "needs": drawdown.needs,
+                    "before": drawdown.before,
+                    "after": drawdown.after,
+                    "shortfalls": inventory.to_jsonable(drawdown.shortfalls),
+                    "crossed": [c.name for c in drawdown.crossed],
+                })
+                if drawdown.crossed:
+                    purchase = inventory.compute_purchase_list()
+                    evidence.log("purchase_alert", "system", {
+                        "order_id": order_id,
+                        "items": [inventory.to_jsonable(p) for p in purchase],
+                    })
+                    try:
+                        await owner_bot.send_purchase_alert(purchase, order_id)
+                    except Exception as e:
+                        evidence.log("error", "system", {"where": "auto_confirm_purchase_alert", "error": str(e)})
+            except Exception as e:
+                evidence.log("error", "system", {"where": "auto_confirm_drawdown", "error": str(e)})
+
+    # Kitchen ticket
+    try:
+        kitchen_items = [
+            {"productId": _kitchen_id(it["variation_id"]), "quantity": it.get("quantity", 1)}
+            for it in items
+        ]
+        mcp_client.call("kitchen_create_ticket", {
+            "orderId": square_order_id,
+            "customerName": customer_name or "Friend",
+            "items": kitchen_items,
+            "requestedPickupAt": pickup_iso or "",
+            "notes": decision.get("customer_note") or "",
+        })
+    except Exception as e:
+        evidence.log("error", "system", {"where": "auto_confirm_kitchen_ticket", "error": str(e)})
+
+    items_label = _format_items(items)
+    confirmation_text = _auto_confirm_message(
+        customer_name=customer_name,
+        channel=channel,
+        items_label=items_label,
+        pickup_iso=pickup_iso,
+        same_day=same_day,
+    )
+
+    evidence.log("auto_confirm", channel, {
+        "order_id": order_id,
+        "square_order_id": square_order_id,
+        "items_label": items_label,
+        "pickup_time": pickup_iso,
+        "same_day": same_day,
+    })
+
+    # Publish to any SSE/polling subscribers (so /order-status/ pages update)
+    await order_events.publish(order_id, {
+        "status": "approved",
+        "message": confirmation_text,
+        "square_order_id": square_order_id,
+        "items": items_label,
+        "pickup_time": pickup_iso,
+        "auto_confirmed": True,
+    })
+
+    # FYI to owner — no buttons, just a heads-up.
+    try:
+        import html
+        e = html.escape
+        fyi = (
+            f"✅ <b>Auto-confirmed</b> — {e(channel)} · {e(customer_name or 'Friend')}\n"
+            f"<b>Items:</b> {e(items_label)}\n"
+            + (f"<b>Pickup:</b> {e(pickup_iso)}\n" if pickup_iso else "")
+            + f"<i>Square:</i> <code>{e(square_order_id)}</code>"
+        )
+        await owner_bot.send_fyi(fyi)
+    except Exception as e:
+        evidence.log("error", "system", {"where": "auto_confirm_fyi", "error": str(e)})
+
+    return {
+        "square_order_id": square_order_id,
+        "confirmation_text": confirmation_text,
+    }
+
+
+def _auto_confirm_message(
+    *,
+    customer_name: str,
+    channel: str,
+    items_label: str,
+    pickup_iso: str | None,
+    same_day: bool,
+) -> str:
+    """Customer-facing confirmation for an auto-confirmed order."""
+    name = _friendly_name(customer_name)
+    closing = _channel_closing(channel)
+    if same_day:
+        timing = "Ready at the counter — pop in any time we're open today."
+    elif pickup_iso:
+        timing = f"We've got it on the schedule for {pickup_iso}."
+    else:
+        timing = "We've got it on the schedule — we'll confirm the exact pickup window shortly."
+    return f"Confirmed, {name} — {items_label}. {timing} {closing}"
 
 
 async def on_owner_edit_message(order_id: str, text: str, handoff: dict[str, Any]) -> None:

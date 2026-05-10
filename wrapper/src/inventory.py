@@ -204,6 +204,36 @@ def compute_ingredient_needs(items: list[dict[str, Any]]) -> dict[str, dict[str,
     return needs
 
 
+# ---------- ingredient feasibility (read-only) ----------
+
+def check_ingredient_feasibility(items: list[dict[str, Any]]) -> list[Shortfall]:
+    """Read-only feasibility check for a future-day order.
+
+    Returns a list of Shortfalls — empty means we can bake this without
+    overdrawing any pantry line. No state is modified. Use this to decide
+    whether to auto-confirm; only call decrement_ingredients() once you've
+    committed to the order.
+    """
+    needs = compute_ingredient_needs(items)
+    if not needs:
+        return []
+    state = load_ingredients()
+    shortfalls: list[Shortfall] = []
+    for ing, spec in needs.items():
+        required = float(spec["qty"])
+        if ing not in state:
+            shortfalls.append(Shortfall(variation_id=ing, requested=int(required), available=0))
+            continue
+        on_hand = float(state[ing].get("on_hand", 0))
+        if on_hand < required:
+            shortfalls.append(Shortfall(
+                variation_id=ing,
+                requested=int(required),
+                available=int(on_hand),
+            ))
+    return shortfalls
+
+
 # ---------- ingredient drawdown ----------
 
 def decrement_ingredients(needs: dict[str, dict[str, Any]]) -> DrawdownResult:
