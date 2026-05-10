@@ -27,6 +27,9 @@ fi
 
 echo "Seeding sandbox state — this hits the live sandbox MCP and takes ~60s."
 echo
+echo "Pre-warming the customer-memory embedding model (~120MB on first run, cached after)…"
+uv run --active --project wrapper python -c "from happycake_wrapper import embeddings; ok = embeddings.warm(); print('  embeddings ready' if ok else '  embeddings unavailable — exact-key recall still works')" || true
+echo
 uv run --active --project wrapper python scripts/seed-evaluator-evidence.py
 echo
 echo "Done. Re-running evaluator_generate_team_report to refresh the score:"

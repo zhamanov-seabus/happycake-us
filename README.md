@@ -174,6 +174,21 @@ The catalog file at `data/catalog.yml` is the single source of truth: the site r
 
 ---
 
+## Semantic customer memory
+
+The wrapper carries a per-customer memory layer at [`wrapper/src/memory.py`](wrapper/src/memory.py) — file-based (`data/customer_memory.jsonl`, gitignored) with a 384-dim embedding stored alongside each order record. The architecture mirrors the maintainer's [`tai-memory`](https://github.com/zhamanov-seabus/tai-memory) project (Postgres + pgvector + local fastembed); for the hackathon submission the embedding+similarity layer ships in-process so an evaluator clone has no external Postgres dependency.
+
+Two recall paths run in parallel before each `claude -p` invocation:
+
+- **Exact-key recall** — match on durable identifier (WhatsApp phone, Instagram thread, website localStorage `visitor_id`). Deterministic.
+- **Semantic recall** — cosine similarity against every past order across all customers, threshold 0.25. Catches anonymous returning visitors whose `visitor_id` rotated, and resolves underspecified intent ("what I had last time", "the usual", "обычное" — the embedding text bakes in bilingual referential anchors).
+
+Both blocks are injected into the prompt as additional system context. The agent confirms the variation explicitly before locking it in, so a soft semantic match never silently commits the wrong order.
+
+The fastembed model (`paraphrase-multilingual-MiniLM-L12-v2`, ~120MB) downloads on first use to `~/.cache/fastembed/`. `./scripts/seed.sh` pre-warms it so the evaluator's first chat call doesn't pay the download cost.
+
+---
+
 ## Telegram bots in this submission
 
 | Bot | Username | Purpose | Token location |
