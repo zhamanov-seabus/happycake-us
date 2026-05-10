@@ -176,32 +176,72 @@ async def order_status_stream(order_id: str) -> StreamingResponse:
     )
 
 
+# ---------- Webhook payload extraction ----------
+# The sandbox forwards events using Meta's webhook envelope:
+#   {object, entry: [{changes: [{field, value: {messages, contacts, ...}}]}]}
+# Our own scripts/demo.sh uses a flat shape:
+#   {from, fromName, message, threadId, ...}
+# This extractor handles both so the channel handlers stay simple.
+
+def _extract_message(channel: str, payload: dict) -> dict:
+    """Return {text, from, fromName, threadId} or {} if no usable message."""
+    # Flat shape (our scripts) takes precedence if present
+    text = payload.get("message") or payload.get("text") or payload.get("body")
+    if text:
+        return {
+            "text": text,
+            "from": payload.get("from") or payload.get("fromHandle"),
+            "fromName": payload.get("fromName") or payload.get("from"),
+            "threadId": payload.get("threadId"),
+        }
+
+    # Meta envelope — walk entry[*].changes[*].value.messages[*]
+    try:
+        for entry in payload.get("entry", []) or []:
+            for change in entry.get("changes", []) or []:
+                value = change.get("value") or {}
+                contacts = value.get("contacts") or []
+                msgs = value.get("messages") or []
+                for m in msgs:
+                    body = (m.get("text") or {}).get("body")
+                    if not body:
+                        continue
+                    sender = m.get("from")
+                    name = None
+                    if contacts:
+                        c0 = contacts[0] or {}
+                        name = (c0.get("profile") or {}).get("name") or c0.get("wa_id")
+                    return {
+                        "text": body,
+                        "from": sender,
+                        "fromName": name or sender,
+                        # IG uses thread_id; WA threads keyed off phone for our purposes
+                        "threadId": m.get("threadId") or value.get("threadId"),
+                    }
+    except (TypeError, AttributeError):
+        pass
+
+    return {}
+
+
 # ---------- Instagram webhook ----------
-# The sandbox forwards events here after we register via instagram_register_webhook.
-# Shape: { "type": "dm.in", "threadId": "...", "from": "...", "fromName": "...", "message": "..." }
-# We accept a permissive payload — the sandbox forwarder may use slightly different keys.
 
 @app.post("/webhook/instagram")
 async def webhook_instagram(payload: dict) -> dict:
     evidence.log("webhook_in", "instagram", {"payload": payload})
-    msg = (
-        payload.get("message")
-        or payload.get("text")
-        or payload.get("body")
-        or ""
-    )
+    extracted = _extract_message("instagram", payload)
+    msg = extracted.get("text") or ""
     if not msg:
-        return {"ok": True, "skipped": "no message"}
+        return {"ok": True, "skipped": "no message", "shape_seen": list(payload.keys())[:6]}
     decision = await agent.handle_customer_message(
         channel="instagram",
-        customer_name=payload.get("fromName") or payload.get("from") or "Friend",
-        customer_handle=payload.get("from") or payload.get("fromHandle") or "ig_user",
+        customer_name=extracted.get("fromName") or "Friend",
+        customer_handle=extracted.get("from") or "ig_user",
         text=msg,
-        thread_id=payload.get("threadId"),
+        thread_id=extracted.get("threadId"),
     )
-    # If the agent decided this was a faq/smalltalk and no approval needed, reply on IG immediately.
     if decision.get("intent") in ("faq", "smalltalk") and not decision.get("needs_owner_approval"):
-        thread_id = payload.get("threadId")
+        thread_id = extracted.get("threadId")
         if thread_id:
             from . import mcp_client
             try:
@@ -220,18 +260,19 @@ async def webhook_instagram(payload: dict) -> dict:
 @app.post("/webhook/whatsapp")
 async def webhook_whatsapp(payload: dict) -> dict:
     evidence.log("webhook_in", "whatsapp", {"payload": payload})
-    msg = payload.get("message") or payload.get("text") or payload.get("body") or ""
+    extracted = _extract_message("whatsapp", payload)
+    msg = extracted.get("text") or ""
     if not msg:
-        return {"ok": True, "skipped": "no message"}
+        return {"ok": True, "skipped": "no message", "shape_seen": list(payload.keys())[:6]}
+    phone = extracted.get("from")
     decision = await agent.handle_customer_message(
         channel="whatsapp",
-        customer_name=payload.get("fromName") or "Friend",
-        customer_handle=payload.get("from") or "wa_user",
+        customer_name=extracted.get("fromName") or "Friend",
+        customer_handle=phone or "wa_user",
         text=msg,
-        phone=payload.get("from"),
+        phone=phone,
     )
     if decision.get("intent") in ("faq", "smalltalk") and not decision.get("needs_owner_approval"):
-        phone = payload.get("from")
         if phone:
             from . import mcp_client
             try:
