@@ -177,19 +177,17 @@ header.nav.is-scrolled { border-bottom-color: var(--cocoa-line); }
   align-items: center;
   gap: 10px;
 }
-.wordmark-mark {
-  width: 28px; height: 28px;
-  background: var(--honey);
-  border-radius: 50%;
-  display: inline-block;
-  position: relative;
+/* Logo wordmark: the brand logo PNG ('Happy Cake — Family sweets') is the
+   wordmark on its own — no adjacent text. Source PNG is auto-cropped so the
+   visible content fills the box. Sized by height; width follows aspect. */
+.wordmark-logo {
+  display: block;
+  height: 44px;
+  width: auto;
   flex: none;
 }
-.wordmark-mark::after {
-  content: "";
-  position: absolute; inset: 6px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.85);
+.wordmark-footer .wordmark-logo {
+  height: 60px;
 }
 .nav-links {
   display: flex; gap: 28px;

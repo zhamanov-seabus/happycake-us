@@ -67,8 +67,7 @@ const localBusiness = {
     <header class="nav" id="nav">
       <div class="nav-inner">
         <a href={withBase('/')} class="wordmark" aria-label="HappyCake home">
-          <span class="wordmark-mark" aria-hidden="true"></span>
-          <span>HappyCake</span>
+          <img class="wordmark-logo" src={withBase('/images/logo.png')} alt="HappyCake" />
         </a>
         <nav class="nav-links" aria-label="Primary">
           <a href={withBase('/catalog/')}>Catalog</a>
@@ -106,7 +105,7 @@ const localBusiness = {
       <div class="wrap">
         <div class="footer-top">
           <div class="footer-col">
-            <a href={withBase('/')} class="wordmark"><span class="wordmark-mark"></span><span>HappyCake</span></a>
+            <a href={withBase('/')} class="wordmark wordmark-footer" aria-label="HappyCake home"><img class="wordmark-logo" src={withBase('/images/logo.png')} alt="HappyCake" /></a>
             <p>The original taste of happiness. Hand-built cakes, baked the way they used to be — in Sugar Land, Texas.</p>
             <a href="https://instagram.com/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
