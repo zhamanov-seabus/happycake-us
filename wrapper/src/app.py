@@ -195,7 +195,7 @@ def _extract_message(channel: str, payload: dict) -> dict:
             "threadId": payload.get("threadId"),
         }
 
-    # Meta envelope — walk entry[*].changes[*].value.messages[*]
+    # Meta WA envelope — entry[*].changes[*].value.messages[*]
     try:
         for entry in payload.get("entry", []) or []:
             for change in entry.get("changes", []) or []:
@@ -215,9 +215,29 @@ def _extract_message(channel: str, payload: dict) -> dict:
                         "text": body,
                         "from": sender,
                         "fromName": name or sender,
-                        # IG uses thread_id; WA threads keyed off phone for our purposes
                         "threadId": m.get("threadId") or value.get("threadId"),
                     }
+    except (TypeError, AttributeError):
+        pass
+
+    # Meta Messenger envelope (Instagram + Messenger) —
+    #   entry[*].messaging[*].{sender:{id}, message:{text}}
+    try:
+        for entry in payload.get("entry", []) or []:
+            for ev in entry.get("messaging", []) or []:
+                m = ev.get("message") or {}
+                text = m.get("text")
+                if not text:
+                    continue
+                sender_id = (ev.get("sender") or {}).get("id")
+                # IG sandbox sometimes carries threadId here or on the sender
+                thread_id = ev.get("threadId") or m.get("threadId") or sender_id
+                return {
+                    "text": text,
+                    "from": sender_id,
+                    "fromName": sender_id,
+                    "threadId": thread_id,
+                }
     except (TypeError, AttributeError):
         pass
 
