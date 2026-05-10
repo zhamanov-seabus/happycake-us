@@ -87,7 +87,15 @@ For local-only development, the demo script bypasses webhooks by POSTing payload
 
 ## Running the demo
 
-The demo script simulates one full customer journey end-to-end:
+**On a fresh clone, seed the sandbox first** so every rubric line has evidence to score against (~60s):
+
+```bash
+./scripts/seed.sh
+```
+
+This populates Instagram threads, WhatsApp threads, Google Business review replies, the full $500 marketing loop (5 campaigns + adjustments + owner report), and runs the launch-day world scenario. `evaluator_generate_team_report` reads sandbox-side state, so a non-seeded sandbox scores low on marketing / IG / WA / GB even when the code is correct. Safe to re-run.
+
+Then the demo script simulates one full customer journey end-to-end:
 
 ```bash
 ./scripts/demo.sh
