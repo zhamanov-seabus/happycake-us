@@ -245,35 +245,54 @@ def _extract_message(channel: str, payload: dict) -> dict:
     return {}
 
 
+# ---------- Channel processing (async, fire-and-forget from webhooks) ----------
+
+async def _process_inbound(channel: str, extracted: dict) -> None:
+    """Run the agent + side effects for an extracted inbound message.
+    Called as a background task from the webhook handlers so the webhook
+    returns HTTP 202 within ms (sandbox forwarder has a short timeout)."""
+    msg = extracted.get("text") or ""
+    if not msg:
+        return
+    sender = extracted.get("from")
+    decision = await agent.handle_customer_message(
+        channel=channel,
+        customer_name=extracted.get("fromName") or "Friend",
+        customer_handle=sender or f"{channel}_user",
+        text=msg,
+        thread_id=extracted.get("threadId"),
+        phone=sender if channel == "whatsapp" else None,
+    )
+    # Inline reply for benign FAQ/smalltalk
+    if decision.get("intent") in ("faq", "smalltalk") and not decision.get("needs_owner_approval"):
+        from . import mcp_client
+        reply_text = decision.get("reply_text", "Thanks — back to you shortly.")
+        try:
+            if channel == "instagram":
+                tid = extracted.get("threadId")
+                if tid:
+                    mcp_client.call("instagram_send_dm", {"threadId": tid, "message": reply_text})
+                    evidence.log("customer_reply", "instagram", {"text": reply_text[:300]})
+            elif channel == "whatsapp":
+                if sender:
+                    mcp_client.call("whatsapp_send", {"to": sender, "message": reply_text})
+                    evidence.log("customer_reply", "whatsapp", {"text": reply_text[:300]})
+        except Exception as e:
+            evidence.log("error", "system", {"where": f"{channel}_inline_reply", "error": str(e)})
+
+
 # ---------- Instagram webhook ----------
 
 @app.post("/webhook/instagram")
 async def webhook_instagram(payload: dict) -> dict:
     evidence.log("webhook_in", "instagram", {"payload": payload})
     extracted = _extract_message("instagram", payload)
-    msg = extracted.get("text") or ""
-    if not msg:
+    if not extracted.get("text"):
         return {"ok": True, "skipped": "no message", "shape_seen": list(payload.keys())[:6]}
-    decision = await agent.handle_customer_message(
-        channel="instagram",
-        customer_name=extracted.get("fromName") or "Friend",
-        customer_handle=extracted.get("from") or "ig_user",
-        text=msg,
-        thread_id=extracted.get("threadId"),
-    )
-    if decision.get("intent") in ("faq", "smalltalk") and not decision.get("needs_owner_approval"):
-        thread_id = extracted.get("threadId")
-        if thread_id:
-            from . import mcp_client
-            try:
-                mcp_client.call("instagram_send_dm", {
-                    "threadId": thread_id,
-                    "message": decision.get("reply_text", "Thanks — back to you shortly."),
-                })
-                evidence.log("customer_reply", "instagram", {"text": decision.get("reply_text", "")[:300]})
-            except Exception as e:
-                evidence.log("error", "system", {"where": "ig_inline_reply", "error": str(e)})
-    return {"ok": True, "intent": decision.get("intent")}
+    # Ack immediately; process in the background so the sandbox forwarder
+    # (which has a short HTTP timeout) doesn't see a stalled connection.
+    asyncio.create_task(_process_inbound("instagram", extracted))
+    return {"ok": True, "accepted": True}
 
 
 # ---------- WhatsApp webhook ----------
@@ -282,26 +301,7 @@ async def webhook_instagram(payload: dict) -> dict:
 async def webhook_whatsapp(payload: dict) -> dict:
     evidence.log("webhook_in", "whatsapp", {"payload": payload})
     extracted = _extract_message("whatsapp", payload)
-    msg = extracted.get("text") or ""
-    if not msg:
+    if not extracted.get("text"):
         return {"ok": True, "skipped": "no message", "shape_seen": list(payload.keys())[:6]}
-    phone = extracted.get("from")
-    decision = await agent.handle_customer_message(
-        channel="whatsapp",
-        customer_name=extracted.get("fromName") or "Friend",
-        customer_handle=phone or "wa_user",
-        text=msg,
-        phone=phone,
-    )
-    if decision.get("intent") in ("faq", "smalltalk") and not decision.get("needs_owner_approval"):
-        if phone:
-            from . import mcp_client
-            try:
-                mcp_client.call("whatsapp_send", {
-                    "to": phone,
-                    "message": decision.get("reply_text", "Thanks — back to you shortly."),
-                })
-                evidence.log("customer_reply", "whatsapp", {"text": decision.get("reply_text", "")[:300]})
-            except Exception as e:
-                evidence.log("error", "system", {"where": "wa_inline_reply", "error": str(e)})
-    return {"ok": True, "intent": decision.get("intent")}
+    asyncio.create_task(_process_inbound("whatsapp", extracted))
+    return {"ok": True, "accepted": True}
