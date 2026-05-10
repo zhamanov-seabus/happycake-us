@@ -37,7 +37,19 @@ def _catalog_block() -> str:
 
 def _load_system_prompt() -> str:
     base = SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
-    return f"{base}\n\n## Live catalog (variation_ids to use in `items[*].variation_id`)\n\n{_catalog_block()}\n"
+    # Stock awareness — pulled live from sandbox + local ingredients.yml.
+    # Imported lazily so unit tests of claude_runner don't drag the whole stack.
+    try:
+        from . import inventory
+        stock_block = inventory.stock_summary_for_prompt()
+    except Exception as e:
+        stock_block = f"## Today's stock (live)\n\n(could not read stock: {e})\n"
+    return (
+        f"{base}\n\n"
+        f"## Live catalog (variation_ids to use in `items[*].variation_id`)\n\n"
+        f"{_catalog_block()}\n\n"
+        f"{stock_block}\n"
+    )
 
 
 def _channel_rules(channel: str) -> str:

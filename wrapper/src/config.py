@@ -27,5 +27,7 @@ PUBLIC_SITE_URL = _env("PUBLIC_SITE_URL", "https://happycake.us")
 
 CATALOG_PATH = REPO_ROOT / "data" / "catalog.yml"
 BRANDBOOK_PATH = REPO_ROOT / "data" / "brandbook.md"
+RECIPES_PATH = REPO_ROOT / "data" / "recipes.yml"
+INGREDIENTS_PATH = REPO_ROOT / "data" / "ingredients.yml"
 EVIDENCE_PATH = REPO_ROOT / "evidence" / "log.jsonl"
 EVIDENCE_PATH.parent.mkdir(exist_ok=True)

@@ -113,6 +113,8 @@ def get_app() -> Application:
         _app.add_handler(CommandHandler("menu", _on_menu))
         _app.add_handler(CommandHandler("report", _on_report))
         _app.add_handler(CommandHandler("post", _on_post))
+        _app.add_handler(CommandHandler("purchase", _on_purchase))
+        _app.add_handler(CommandHandler("restock", _on_restock))
         _app.add_handler(CallbackQueryHandler(_on_callback, pattern=r"^order:"))
         _app.add_handler(CallbackQueryHandler(_on_post_callback, pattern=r"^post:"))
         # Free-form text from the owner is treated as a follow-up after Edit.
@@ -248,6 +250,98 @@ async def _on_post(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         )
     except Exception as e:
         await update.message.reply_text(f"Couldn't draft post — {e}")
+
+
+# ---------- Purchase / restock (kitchen ingredient flow) ----------
+
+def _format_purchase_list(items, header: str) -> str:
+    e = html.escape
+    if not items:
+        return "🛒 <b>Shopping list</b> — nothing pending. Pantry's healthy."
+    lines = [f"🛒 <b>{e(header)}</b>", ""]
+    total_packs = 0
+    for p in items:
+        total_packs += getattr(p, "qty", 0)
+        hint = getattr(p, "supplier_hint", None)
+        suffix = f" — <i>{e(hint)}</i>" if hint else ""
+        pack_qty = getattr(p, "pack_qty", "") or ""
+        pack_label = f"{pack_qty} {e(p.unit)}" if pack_qty else e(p.unit)
+        lines.append(
+            f"• <b>{e(p.name)}</b> — {p.qty}× {pack_label} pack"
+            f" (currently {p.on_hand} / threshold {p.reorder_at}){suffix}"
+        )
+    lines.append("")
+    lines.append("After your shopping run, tell me with:")
+    lines.append("  <code>/restock &lt;ingredient&gt; &lt;qty in native unit&gt;</code>")
+    lines.append("  e.g. <code>/restock butter 1000</code> for a 4-pack of 250 g.")
+    return "\n".join(lines)
+
+
+async def send_purchase_alert(items, trigger_order_id: str) -> None:
+    """Push a structured shopping list to the owner. Called from agent.on_owner_decision
+    when an ingredient drops below its reorder threshold during a future-day order draw."""
+    if not TELEGRAM_OWNER_CHAT_ID:
+        log.warning("TELEGRAM_OWNER_CHAT_ID empty — purchase alert skipped")
+        return
+    text = _format_purchase_list(
+        items,
+        f"Reorder triggered by {trigger_order_id}",
+    )
+    app = get_app()
+    try:
+        await app.bot.send_message(
+            chat_id=TELEGRAM_OWNER_CHAT_ID,
+            text=text,
+            parse_mode="HTML",
+            disable_web_page_preview=True,
+        )
+    except Exception as e:
+        log.warning("send_purchase_alert failed: %s", e)
+        evidence.log("error", "system", {"where": "send_purchase_alert", "error": str(e)})
+
+
+async def _on_purchase(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """`/purchase` shows the current shopping list (anything below reorder_at)."""
+    from . import inventory
+    try:
+        items = inventory.compute_purchase_list()
+        text = _format_purchase_list(items, "Shopping list — current snapshot")
+        await update.message.reply_text(text, parse_mode="HTML", disable_web_page_preview=True)
+    except Exception as e:
+        await update.message.reply_text(f"Couldn't read inventory — {e}")
+
+
+async def _on_restock(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """`/restock <ingredient> <qty>` bumps on-hand after the owner's shopping run."""
+    from . import inventory
+    args = ctx.args or []
+    if len(args) < 2:
+        await update.message.reply_text(
+            "Usage: <code>/restock &lt;ingredient&gt; &lt;qty&gt;</code>\n"
+            "Example: <code>/restock butter 1000</code>",
+            parse_mode="HTML",
+        )
+        return
+    name = args[0].strip().lower()
+    try:
+        qty = float(args[1])
+    except ValueError:
+        await update.message.reply_text(f"Couldn't parse qty '{args[1]}' as a number.")
+        return
+    res = inventory.restock(name, qty)
+    if not res.get("ok"):
+        avail = res.get("available", [])
+        msg = res.get("error", "restock failed")
+        if avail:
+            msg += "\n\nKnown ingredients: " + ", ".join(avail)
+        await update.message.reply_text(msg)
+        return
+    evidence.log("restock", "telegram", {"name": name, "qty": qty, "on_hand": res["on_hand"]})
+    await update.message.reply_text(
+        f"✅ <b>{html.escape(name)}</b> now at <b>{res['on_hand']} {res.get('unit','')}</b>. "
+        f"Use <code>/purchase</code> to see what's still pending.",
+        parse_mode="HTML",
+    )
 
 
 async def _on_today(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:

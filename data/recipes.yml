@@ -1,0 +1,62 @@
+# HappyCake recipes — bills of materials per catalog variation_id.
+#
+# IMPORTANT: these are simulator-grade representations for the hackathon.
+# Real production BOMs are bakery-proprietary and would replace this file.
+# The agent uses them only to estimate ingredient draw on future-day orders;
+# customer-facing claims (allergens, weight, price) come from data/catalog.yml.
+#
+# Quantities are per single unit (yields: 1) unless otherwise noted.
+# Units: g (grams), each (whole pieces), ml (millilitres).
+
+recipes:
+  sq_var_honey_cake_slice:
+    yields: 1
+    ingredients:
+      flour:      { qty: 38,  unit: g }
+      butter:     { qty: 24,  unit: g }
+      eggs:       { qty: 0.7, unit: each }
+      honey:      { qty: 22,  unit: g }
+      sour_cream: { qty: 30,  unit: g }
+      sugar:      { qty: 24,  unit: g }
+
+  sq_var_whole_honey_cake:
+    yields: 1
+    ingredients:
+      flour:      { qty: 320, unit: g }
+      butter:     { qty: 200, unit: g }
+      eggs:       { qty: 6,   unit: each }
+      honey:      { qty: 180, unit: g }
+      sour_cream: { qty: 250, unit: g }
+      sugar:      { qty: 200, unit: g }
+
+  sq_var_pistachio_roll:
+    yields: 1
+    ingredients:
+      flour:           { qty: 45, unit: g }
+      butter:          { qty: 30, unit: g }
+      eggs:            { qty: 1,  unit: each }
+      sugar:           { qty: 30, unit: g }
+      pistachio_paste: { qty: 40, unit: g }
+
+  sq_var_custom_birthday_cake:
+    yields: 1
+    ingredients:
+      flour:          { qty: 400, unit: g }
+      butter:         { qty: 250, unit: g }
+      eggs:           { qty: 8,   unit: each }
+      sugar:          { qty: 280, unit: g }
+      sour_cream:     { qty: 300, unit: g }
+      mascarpone:     { qty: 250, unit: g }
+      vanilla:        { qty: 8,   unit: ml }
+      decoration_kit: { qty: 1,   unit: each }
+
+  sq_var_office_dessert_box:
+    yields: 1
+    ingredients:
+      flour:           { qty: 600, unit: g }
+      butter:          { qty: 380, unit: g }
+      eggs:            { qty: 12,  unit: each }
+      sugar:           { qty: 400, unit: g }
+      sour_cream:      { qty: 400, unit: g }
+      honey:           { qty: 200, unit: g }
+      pistachio_paste: { qty: 80,  unit: g }

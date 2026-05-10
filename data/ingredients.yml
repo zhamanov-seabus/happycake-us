@@ -1,0 +1,26 @@
+# HappyCake kitchen ingredient inventory — current on-hand state.
+#
+# The wrapper writes here on owner Approve (decrements on_hand) and on
+# /restock <name> <qty> (increments on_hand). Owner can also edit by hand.
+#
+# Each entry:
+#   on_hand        current quantity in the unit shown
+#   unit           g | each | ml — must match data/recipes.yml
+#   reorder_at     when on_hand drops below this, the owner gets a Telegram alert
+#   pack_size      qty + unit a single shopping-trip pack contains
+#                  (purchase list rounds up to whole packs)
+#   supplier_hint  optional note shown on the shopping list
+#
+# Keep this file simple — owner edits it; the wrapper round-trips it untouched.
+
+ingredients:
+  flour:           { on_hand: 4500, unit: g,    reorder_at: 1500, pack_size: { qty: 1000, unit: g },    supplier_hint: "All-purpose unbleached, HEB 1 kg bag" }
+  butter:          { on_hand: 1800, unit: g,    reorder_at: 800,  pack_size: { qty: 250,  unit: g },    supplier_hint: "Unsalted, 4-pack at Costco" }
+  eggs:            { on_hand: 30,   unit: each, reorder_at: 12,   pack_size: { qty: 12,   unit: each }, supplier_hint: "Local farm dozen" }
+  honey:           { on_hand: 900,  unit: g,    reorder_at: 400,  pack_size: { qty: 1000, unit: g },    supplier_hint: "Texas wildflower, 1 kg jar" }
+  sour_cream:      { on_hand: 1200, unit: g,    reorder_at: 500,  pack_size: { qty: 500,  unit: g },    supplier_hint: "Full-fat, 500 g tub" }
+  sugar:           { on_hand: 3500, unit: g,    reorder_at: 1000, pack_size: { qty: 2000, unit: g },    supplier_hint: "Granulated white, 2 kg bag" }
+  pistachio_paste: { on_hand: 250,  unit: g,    reorder_at: 200,  pack_size: { qty: 500,  unit: g },    supplier_hint: "Imported, 500 g jar" }
+  mascarpone:      { on_hand: 400,  unit: g,    reorder_at: 250,  pack_size: { qty: 250,  unit: g },    supplier_hint: "Italian, 250 g tub" }
+  vanilla:         { on_hand: 80,   unit: ml,   reorder_at: 30,   pack_size: { qty: 100,  unit: ml },   supplier_hint: "Pure extract, 100 ml" }
+  decoration_kit:  { on_hand: 2,    unit: each, reorder_at: 2,    pack_size: { qty: 1,    unit: each }, supplier_hint: "Custom theme set; order 24 h ahead" }

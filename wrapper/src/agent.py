@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 
-from . import claude_runner, evidence, mcp_client, order_events, owner_bot
+from . import claude_runner, evidence, inventory, mcp_client, order_events, owner_bot
 from .config import CATALOG_PATH
 
 
@@ -111,6 +111,54 @@ async def on_owner_decision(order_id: str, verb: str, handoff: dict[str, Any]) -
     if verb == "approve":
         items = raw.get("items") or []
         if items:
+            # Stock-aware qualification BEFORE we create the POS order.
+            pickup_iso = handoff.get("pickup_time") or raw.get("pickup_time_iso")
+            same_day = inventory.is_same_day(pickup_iso)
+
+            if same_day:
+                # ── Same-day path: confirm against the live counter ────────
+                shortfalls = inventory.check_ready_stock(items)
+                if shortfalls:
+                    sf_payload = inventory.to_jsonable(shortfalls)
+                    evidence.log("inventory_shortfall", channel, {
+                        "order_id": order_id,
+                        "shortfalls": sf_payload,
+                    })
+                    msg = _stockout_message(handoff, shortfalls)
+                    await _reply_to_customer(handoff, msg)
+                    await order_events.publish(order_id, {
+                        "status": "rejected",
+                        "message": msg,
+                        "reason": "same-day stock unavailable",
+                    })
+                    return
+            else:
+                # ── Future-day path: draw down ingredient stock ───────────
+                needs = inventory.compute_ingredient_needs(items)
+                if needs:
+                    drawdown = inventory.decrement_ingredients(needs)
+                    evidence.log("inventory_drawdown", channel, {
+                        "order_id": order_id,
+                        "needs": drawdown.needs,
+                        "before": drawdown.before,
+                        "after": drawdown.after,
+                        "shortfalls": inventory.to_jsonable(drawdown.shortfalls),
+                        "crossed": [c.name for c in drawdown.crossed],
+                    })
+                    if drawdown.crossed:
+                        purchase = inventory.compute_purchase_list()
+                        evidence.log("purchase_alert", "system", {
+                            "order_id": order_id,
+                            "items": [inventory.to_jsonable(p) for p in purchase],
+                        })
+                        try:
+                            await owner_bot.send_purchase_alert(purchase, order_id)
+                        except Exception as e:
+                            evidence.log("error", "system", {
+                                "where": "send_purchase_alert",
+                                "error": str(e),
+                            })
+
             # Convert snake_case (agent / catalog convention) → camelCase (sandbox API)
             square_items = [
                 {
@@ -231,6 +279,20 @@ def _approval_message(handoff: dict[str, Any]) -> str:
     return (
         f"Got it, {name} — the team has it. We'll be back to you here as soon "
         f"as there's an answer. {closing}"
+    )
+
+
+def _stockout_message(handoff: dict[str, Any], shortfalls: list) -> str:
+    """Customer-facing message when a same-day order can't be filled."""
+    name = _friendly_name(handoff.get("customer_name"))
+    channel = handoff.get("channel", "website")
+    closing = _channel_closing(channel)
+    # Try to pull display names from the catalog via the items_label
+    label = handoff.get("items_label") or "the order"
+    return (
+        f"So sorry, {name} — we're out of {label} for today's counter. "
+        f"If you can flex to tomorrow we'll bake fresh, or we can swap to "
+        f"another cake we have in. {closing}"
     )
 
 
