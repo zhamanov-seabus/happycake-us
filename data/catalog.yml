@@ -17,6 +17,10 @@ products:
     description: "Tender layers of honey biscuit and sour-cream filling. The everyday slice."
     photo: /images/happy-cake-product-01.webp
     tags: [classic, single-serving, walk-in]
+    allergens:
+      contains: [dairy, egg, wheat]
+      traces: [tree_nuts]
+    dietary: [vegetarian]
 
   - id: sq_item_whole_honey_cake
     variation_id: sq_var_whole_honey_cake
@@ -31,6 +35,10 @@ products:
     photo: /images/happy-cake-product-02.webp
     tags: [classic, family-order, signature]
     lead_time_minutes: 45
+    allergens:
+      contains: [dairy, egg, wheat]
+      traces: [tree_nuts]
+    dietary: [vegetarian]
 
   - id: sq_item_pistachio_roll
     variation_id: sq_var_pistachio_roll
@@ -44,6 +52,10 @@ products:
     description: "Light biscuit with pistachio cream and a fine roasted-pistachio finish."
     photo: /images/happy-cake-product-03.webp
     tags: [premium, single-serving]
+    allergens:
+      contains: [dairy, egg, wheat, tree_nuts]
+      traces: []
+    dietary: [vegetarian]
 
   - id: sq_item_custom_birthday_cake
     variation_id: sq_var_custom_birthday_cake
@@ -59,6 +71,11 @@ products:
     tags: [custom, requires-approval, celebration]
     requires_owner_approval: true
     lead_time_minutes: 180
+    allergens:
+      contains: [dairy, egg, wheat]
+      traces: [tree_nuts, soy]
+      note: "Decoration may add additional allergens — confirmed during the custom-cake review."
+    dietary: [vegetarian]
 
   - id: sq_item_office_dessert_box
     variation_id: sq_var_office_dessert_box
@@ -73,6 +90,18 @@ products:
     photo: /images/happy-cake-product-05.webp
     tags: [catering, office, sharing]
     lead_time_minutes: 90
+    allergens:
+      contains: [dairy, egg, wheat, tree_nuts]
+      traces: [soy]
+      note: "Assortment varies daily; we can pull tree-nut items on request with 24-hour notice."
+    dietary: [vegetarian]
+
+# How to read the allergen block:
+# - contains: ingredients knowingly used in this product
+# - traces:   shared kitchen surface; possible cross-contact
+# - note:     any product-specific caveat worth telling a guest with allergies
+# Per HCU_BRANDBOOK §7: we share what we know honestly; serious allergies must be
+# flagged before we accept the order, and the agent escalates to the owner.
 
 categories:
   - id: slices

@@ -72,6 +72,7 @@ const localBusiness = {
         </a>
         <nav>
           <a href={withBase('/catalog/')}>Catalog</a>
+          <a href={withBase('/custom/')}>Custom</a>
           <a href={withBase('/policies/')}>Policies</a>
           <a href={withBase('/about/')}>About</a>
         </nav>
@@ -85,6 +86,10 @@ const localBusiness = {
         <div>
           <strong>HappyCake</strong> — {b.location.city}, {b.location.state}.<br />
           {b.tagline}
+        </div>
+        <div class="hours">
+          <strong>Open today</strong><br />
+          Mon–Thu {b.hours.mon} · Fri {b.hours.fri} · Sat {b.hours.sat} · Sun {b.hours.sun}
         </div>
         <div>
           {b.closing_pattern}

@@ -1,0 +1,35 @@
+{
+  "fetchedAt": "2026-05-10T04:22:04.932048+00:00",
+  "averageRating": 4.0,
+  "totalCount": 4,
+  "reviews": [
+    {
+      "id": "rev_001",
+      "author": "M. R.",
+      "rating": 5,
+      "text": "Best honey cake in the area. Came for a birthday, leaving as a regular.",
+      "date": "2026-04-21T14:30:00Z"
+    },
+    {
+      "id": "rev_002",
+      "author": "J. S.",
+      "rating": 4,
+      "text": "Lovely pistachio roll. Wish you delivered.",
+      "date": "2026-04-19T09:12:00Z"
+    },
+    {
+      "id": "rev_003",
+      "author": "A. P.",
+      "rating": 2,
+      "text": "Cake was fine but I waited 25 minutes for one slice. Front of house could be faster.",
+      "date": "2026-04-15T17:45:00Z"
+    },
+    {
+      "id": "rev_004",
+      "author": "D. N.",
+      "rating": 5,
+      "text": "We've been ordering from HappyCake for our office birthdays for months. Never disappointed.",
+      "date": "2026-04-12T11:00:00Z"
+    }
+  ]
+}

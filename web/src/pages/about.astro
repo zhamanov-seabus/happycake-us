@@ -39,6 +39,20 @@ const b = getCatalog().business;
       <li>We are not exclusive. HappyCake is for families who care about traditional values.</li>
     </ul>
 
+    <h2>Find us</h2>
+    <ul>
+      <li><strong>Where:</strong> {b.location.city}, {b.location.state} · {b.location.region}</li>
+      <li><strong>Hours:</strong>
+        <ul>
+          {Object.entries(b.hours).map(([day, range]) => (
+            <li><span style="text-transform:capitalize">{day}</span>: {range}</li>
+          ))}
+        </ul>
+      </li>
+      <li><strong>Online:</strong> <a href="https://happycake.us">happycake.us</a></li>
+      <li><strong>Message us:</strong> WhatsApp (preferred) — fastest reply during open hours.</li>
+    </ul>
+
     <p>{b.closing_pattern}</p>
   </section>
 </Layout>

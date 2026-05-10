@@ -6,6 +6,12 @@ import { dirname, resolve } from 'node:path';
 const here = dirname(fileURLToPath(import.meta.url));
 const CATALOG_PATH = resolve(here, '../../../data/catalog.yml');
 
+export interface Allergens {
+  contains: string[];
+  traces: string[];
+  note?: string;
+}
+
 export interface Product {
   id: string;
   variation_id: string;
@@ -21,6 +27,8 @@ export interface Product {
   tags: string[];
   lead_time_minutes?: number;
   requires_owner_approval?: boolean;
+  allergens?: Allergens;
+  dietary?: string[];
 }
 
 export interface Category {

@@ -34,9 +34,7 @@ const wrapperUrl = import.meta.env.PUBLIC_WRAPPER_URL ?? 'http://localhost:8000'
     messages.scrollTop = messages.scrollHeight;
   }
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const text = input.value.trim();
+  async function send(text) {
     if (!text) return;
     addMessage('you', text);
     input.value = '';
@@ -52,5 +50,28 @@ const wrapperUrl = import.meta.env.PUBLIC_WRAPPER_URL ?? 'http://localhost:8000'
     } catch (err) {
       messages.lastChild.querySelector('.bubble').textContent = 'The site assistant is offline. Send a message on WhatsApp or order at happycake.us.';
     }
+  }
+
+  form.addEventListener('submit', (e) => { e.preventDefault(); send(input.value.trim()); });
+
+  // Allow any element with data-prefill="..." to open the assistant pre-filled.
+  // Used by "Order this cake" buttons and the /custom/ intake form.
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-prefill]');
+    if (!el) return;
+    e.preventDefault();
+    panel.classList.add('open');
+    const text = el.getAttribute('data-prefill') || '';
+    setTimeout(() => send(text), 50);
   });
+
+  // Open with prefill from URL (?ask=) — used by deep links from product pages.
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const ask = params.get('ask');
+    if (ask) {
+      panel.classList.add('open');
+      setTimeout(() => send(ask), 250);
+    }
+  } catch {}
 </script>

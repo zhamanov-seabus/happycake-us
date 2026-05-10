@@ -62,7 +62,8 @@ footer.site {
   font-size: 0.9rem;
   color: var(--muted);
 }
-footer.site .container { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+footer.site .container { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem; }
+footer.site .hours { font-size: 0.85rem; line-height: 1.6; max-width: 400px; }
 
 /* Hero */
 .hero {
@@ -150,6 +151,52 @@ footer.site .container { display: flex; justify-content: space-between; flex-wra
   .product { grid-template-columns: 1fr; }
 }
 
+/* Order button on product pages */
+.order-cta-row { margin: 1.5rem 0 0.4rem; display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+.order-button {
+  background: var(--happy-blue);
+  color: white;
+  border: none;
+  font: inherit;
+  font-weight: 500;
+  font-size: 1rem;
+  padding: 0.85rem 1.6rem;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(27, 72, 104, 0.18);
+}
+.order-button:hover { background: var(--ink); }
+.order-link { font-size: 0.85rem; color: var(--muted); }
+
+/* Allergens block */
+.allergens {
+  margin: 1.2rem 0;
+  padding: 0.9rem 1.1rem;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 0.92rem;
+}
+.allergens h4 {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0 0 0.4rem;
+}
+.allergens .row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.3rem; }
+.allergens .pill {
+  font-size: 0.78rem;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  background: var(--cream);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.allergens .pill.contains { background: #fff2ec; border-color: #f0c8b3; color: #9a4116; }
+.allergens .pill.traces { background: #fefae0; border-color: #ead97a; color: #66490a; }
+
 /* Assistant widget */
 .assistant-fab {
   position: fixed;
@@ -228,6 +275,26 @@ footer.site .container { display: flex; justify-content: space-between; flex-wra
   cursor: pointer;
   font-size: 0.9rem;
 }
+
+/* Reviews */
+.reviews .rating-line { font-size: 1rem; color: var(--ink); margin-bottom: 1.2rem; }
+.reviews .stars { color: var(--accent); font-size: 1.05rem; letter-spacing: 0.04em; }
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.2rem;
+}
+.review-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin: 0;
+  padding: 1.2rem 1.3rem;
+  font-size: 0.95rem;
+}
+.review-card .stars { font-size: 0.95rem; margin-bottom: 0.5rem; }
+.review-card p { line-height: 1.5; margin: 0 0 0.6rem; }
+.review-card footer { color: var(--muted); font-size: 0.85rem; }
 
 /* Section spacing */
 section { margin: 3rem 0; }

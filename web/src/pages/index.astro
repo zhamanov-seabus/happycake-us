@@ -2,9 +2,29 @@
 import Layout from '../layouts/Layout.astro';
 import { getCatalog, priceLabel } from '../lib/catalog';
 import { withBase } from '../lib/url';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const catalog = getCatalog();
 const featured = catalog.products.filter(p => p.tags.includes('classic') || p.tags.includes('signature'));
+
+// Load reviews if scripts/pull-reviews.py has been run.
+const reviewsPath = resolve(dirname(fileURLToPath(import.meta.url)), '../../../data/reviews.json');
+type Review = { id: string; author: string; rating: number; text: string; date: string };
+type ReviewsFile = { fetchedAt: string; averageRating: number; totalCount: number; reviews: Review[] };
+const reviewsData: ReviewsFile | null = existsSync(reviewsPath)
+  ? JSON.parse(readFileSync(reviewsPath, 'utf-8'))
+  : null;
+const featuredReviews = (reviewsData?.reviews ?? []).filter(r => r.rating >= 4).slice(0, 3);
+
+const aggregateRating = reviewsData && reviewsData.totalCount > 0 ? {
+  '@context': 'https://schema.org',
+  '@type': 'AggregateRating',
+  itemReviewed: { '@type': 'Bakery', name: 'HappyCake' },
+  ratingValue: reviewsData.averageRating,
+  reviewCount: reviewsData.totalCount,
+} : null;
 ---
 <Layout title="HappyCake — homemade cakes in Sugar Land">
   <section class="container hero">
@@ -39,6 +59,28 @@ const featured = catalog.products.filter(p => p.tags.includes('classic') || p.ta
       ))}
     </div>
   </section>
+
+  {featuredReviews.length > 0 && (
+    <section class="container reviews">
+      <h2>What guests say</h2>
+      {reviewsData && (
+        <p class="rating-line">
+          <span class="stars" aria-label={`${reviewsData.averageRating} out of 5`}>{'★'.repeat(Math.round(reviewsData.averageRating))}{'☆'.repeat(5 - Math.round(reviewsData.averageRating))}</span>
+          <span> {reviewsData.averageRating.toFixed(1)} from {reviewsData.totalCount} reviews</span>
+        </p>
+      )}
+      <div class="review-grid">
+        {featuredReviews.map(r => (
+          <blockquote class="review-card">
+            <div class="stars">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</div>
+            <p>"{r.text}"</p>
+            <footer>— {r.author}</footer>
+          </blockquote>
+        ))}
+      </div>
+      {aggregateRating && <script type="application/ld+json" set:html={JSON.stringify(aggregateRating)} />}
+    </section>
+  )}
 
   <section class="container">
     <h2>How ordering works</h2>

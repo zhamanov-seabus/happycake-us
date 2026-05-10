@@ -43,7 +43,28 @@ const productJsonLd = {
       <p>{p.description}</p>
       <div class="tags">
         {p.tags.map((t: string) => <span class="tag">{t}</span>)}
+        {p.dietary?.map((d: string) => <span class="tag">{d}</span>)}
       </div>
+
+      {p.allergens && (
+        <div class="allergens">
+          <h4>Allergens</h4>
+          {p.allergens.contains.length > 0 && (
+            <div class="row">
+              <strong style="font-size:0.82rem;color:var(--ink);">Contains:</strong>
+              {p.allergens.contains.map((a: string) => <span class="pill contains">{a.replace('_', ' ')}</span>)}
+            </div>
+          )}
+          {p.allergens.traces.length > 0 && (
+            <div class="row">
+              <strong style="font-size:0.82rem;color:var(--ink);">May contain (kitchen traces):</strong>
+              {p.allergens.traces.map((a: string) => <span class="pill traces">{a.replace('_', ' ')}</span>)}
+            </div>
+          )}
+          {p.allergens.note && <p style="margin:0.4rem 0 0;font-size:0.85rem;color:var(--muted);"><em>{p.allergens.note}</em></p>}
+          <p style="margin:0.5rem 0 0;font-size:0.82rem;color:var(--muted);">Serious allergy? Tell us before ordering — the team reviews every flagged order.</p>
+        </div>
+      )}
 
       {p.requires_owner_approval && (
         <div class="order-note">
@@ -51,10 +72,22 @@ const productJsonLd = {
         </div>
       )}
 
+      <div class="order-cta-row" data-product-id={p.variation_id}>
+        <button
+          type="button"
+          class="order-button"
+          data-prefill={`I'd like to order ${p.display_name} (${p.weight}, $${p.price_usd.toFixed(2)}) — variation ${p.variation_id}. Could you confirm pickup time?`}
+          aria-label={`Order ${p.name}`}>
+          Order this cake →
+        </button>
+        <a class="order-link" href={withBase(`/?ask=${encodeURIComponent("I'd like to order " + p.display_name + " — what's the earliest pickup?")}#order`)}>
+          or open chat from anywhere
+        </a>
+      </div>
+
       <div class="order-note">
         <p>
-          <strong>To order:</strong> open the catalog and click the cake on the homepage to start a chat,
-          or send a message on WhatsApp. We confirm within the hour.<br />
+          <strong>To order:</strong> tap the button above to start a chat with HappyCake right here, or send a message on WhatsApp. We confirm within the hour.<br />
           <em>{b.closing_pattern}</em>
         </p>
       </div>

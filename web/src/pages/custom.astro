@@ -1,0 +1,140 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCatalog } from '../lib/catalog';
+import { withBase } from '../lib/url';
+
+const b = getCatalog().business;
+---
+<Layout title="Custom celebration cake" description="Tell us about the cake you have in mind. The team reviews every custom request before we promise a date.">
+  <section class="container prose" id="custom-intake">
+    <h1>A custom cake, made by hand</h1>
+    <p>
+      Decoration is a small, optional service at HappyCake. We're best at our ready-made line —
+      cake "Honey", cake "Pistachio Roll", cake "Napoleon" — but we'll happily build a
+      personal celebration cake for the moments that matter.
+    </p>
+    <p>
+      Tell us a little about it below. The form opens a chat with us; the team reviews every
+      custom request before we promise a date. We confirm within the hour during open hours.
+    </p>
+
+    <form id="custom-form" class="custom-form" autocomplete="off">
+      <div class="field">
+        <label for="cf-name">Your name</label>
+        <input id="cf-name" name="name" type="text" required placeholder="What should we call you?" />
+      </div>
+
+      <div class="field">
+        <label for="cf-occasion">Occasion</label>
+        <input id="cf-occasion" name="occasion" type="text" placeholder="Birthday, anniversary, baby shower, …" />
+      </div>
+
+      <div class="field">
+        <label for="cf-date">When do you need it?</label>
+        <input id="cf-date" name="date" type="date" required />
+      </div>
+
+      <div class="field">
+        <label for="cf-size">How many people?</label>
+        <select id="cf-size" name="size" required>
+          <option value="">Pick a size…</option>
+          <option value="small">6–8 people (~1.0 kg)</option>
+          <option value="medium">8–12 people (~1.5 kg)</option>
+          <option value="large">12–18 people (~2.0 kg)</option>
+          <option value="larger">More than 18 — ask the team</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="cf-budget">Budget</label>
+        <select id="cf-budget" name="budget">
+          <option value="">— optional —</option>
+          <option value="under-100">Under $100</option>
+          <option value="100-150">$100–$150</option>
+          <option value="150-250">$150–$250</option>
+          <option value="open">Open</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="cf-dietary">Allergies or dietary needs</label>
+        <input id="cf-dietary" name="dietary" type="text" placeholder="e.g. nut-free for one guest, vegetarian, less sweet" />
+      </div>
+
+      <div class="field">
+        <label for="cf-theme">Theme or look</label>
+        <textarea id="cf-theme" name="theme" rows="3" placeholder="A photo, colours, a feeling — anything that helps us picture the cake."></textarea>
+      </div>
+
+      <button type="submit" class="order-button">Send to the team →</button>
+      <p id="cf-status" class="cf-status" aria-live="polite"></p>
+    </form>
+
+    <h2>What happens next</h2>
+    <ol>
+      <li>Your request lands in our chat. The team sees it within the hour during open hours.</li>
+      <li>Custom cakes always get a real human review — we never auto-confirm a custom date.</li>
+      <li>If we can do it, we reply with a price quote (typically $95–$150 for personal sizes), the pickup window, and any allergen caveats.</li>
+      <li>If we can't, we'll say so honestly and suggest something close.</li>
+    </ol>
+
+    <p>{b.closing_pattern}</p>
+  </section>
+
+  <style>
+    .custom-form { background: white; border: 1px solid var(--line); border-radius: 14px; padding: 1.5rem 1.6rem; margin: 2rem 0; }
+    .custom-form .field { margin-bottom: 1.1rem; }
+    .custom-form label { display: block; font-size: 0.85rem; color: var(--ink); font-weight: 500; margin-bottom: 0.3rem; }
+    .custom-form input, .custom-form select, .custom-form textarea {
+      width: 100%; padding: 0.6rem 0.8rem; border: 1px solid var(--line);
+      border-radius: 8px; font: inherit; background: var(--cream);
+    }
+    .custom-form input:focus, .custom-form select:focus, .custom-form textarea:focus {
+      outline: none; border-color: var(--happy-blue); background: white;
+    }
+    .cf-status { margin-top: 0.8rem; font-size: 0.9rem; color: var(--muted); }
+    .cf-status.ok { color: #2c6f3f; }
+    .cf-status.err { color: #b54a2c; }
+  </style>
+
+  <script is:inline define:vars={{ wrapperUrl: import.meta.env.PUBLIC_WRAPPER_URL ?? 'http://localhost:8000' }}>
+    const form = document.getElementById('custom-form');
+    const status = document.getElementById('cf-status');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(form).entries());
+      const message = [
+        `Custom cake request from ${data.name || 'a guest'}.`,
+        data.occasion ? `Occasion: ${data.occasion}.` : '',
+        data.date ? `Needs it on: ${data.date}.` : '',
+        data.size ? `Size: ${data.size}.` : '',
+        data.budget ? `Budget: ${data.budget}.` : '',
+        data.dietary ? `Dietary/allergens: ${data.dietary}.` : '',
+        data.theme ? `Theme: ${data.theme}` : '',
+        '',
+        'Please treat this as a custom request — owner approval needed before we confirm a date.',
+      ].filter(Boolean).join('\n');
+
+      status.textContent = 'Sending to the team…';
+      status.className = 'cf-status';
+      try {
+        const r = await fetch(wrapperUrl + '/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, visitor_id: 'custom-intake' }),
+        });
+        const j = await r.json();
+        if (j.reply) {
+          status.textContent = j.reply;
+          status.className = 'cf-status ok';
+          form.reset();
+        } else {
+          throw new Error('no reply');
+        }
+      } catch (err) {
+        status.textContent = "We couldn't reach the team just now. Send a message on WhatsApp and we'll get on it. Order on the site at happycake.us or send a message on WhatsApp.";
+        status.className = 'cf-status err';
+      }
+    });
+  </script>
+</Layout>
