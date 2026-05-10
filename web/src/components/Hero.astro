@@ -59,7 +59,12 @@ const {
   .hero::after {
     content: "";
     position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(58,42,31,0.05) 0%, rgba(58,42,31,0) 30%, rgba(58,42,31,0.55) 100%);
+    background:
+      linear-gradient(180deg,
+        rgba(58,42,31,0.20) 0%,
+        rgba(58,42,31,0.10) 25%,
+        rgba(58,42,31,0.55) 55%,
+        rgba(58,42,31,0.85) 100%);
     z-index: -1;
   }
   .hero-inner {
@@ -90,6 +95,7 @@ const {
     font-weight: 400;
     max-width: 14ch;
     margin-bottom: 22px;
+    text-shadow: 0 2px 24px rgba(0, 0, 0, 0.45);
   }
   .hero h1 em {
     font-style: italic;
@@ -99,10 +105,12 @@ const {
   .hero p.lead {
     font-size: clamp(16px, 1.4vw, 19px);
     max-width: 50ch;
-    color: rgba(255,255,255,0.9);
+    color: rgba(255,255,255,0.95);
     margin: 0 0 32px;
     line-height: 1.5;
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.55);
   }
+  .hero .hero-eyebrow { text-shadow: 0 1px 8px rgba(0, 0, 0, 0.4); }
   .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; }
 
   .hero-meta {
